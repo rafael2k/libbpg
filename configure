@@ -150,7 +150,7 @@ for opt; do
             XLIBS="$optarg"
             ;;
         *)
-            error_exit "unknown option $opt"
+            echo "warning: unknown option $opt"
             ;;
     esac
 done

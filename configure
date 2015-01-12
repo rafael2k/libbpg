@@ -16,10 +16,11 @@ options:
 
   --cc=CC                      use a defined compiler for compilation and linking [gcc]
   --cross-prefix=PREFIX        use PREFIX for compilation tools [none]
+  --target-os=OS               specifiy target OS [osx,win32,unix; default: unix]
   --enable-debug               compile with debug symbols and never strip
-  --enable-osx                 enable buildflags for compilation on MacOS X
 
   --enable-emcc                enable compilation of Javascript decoder with Emscripten
+  --disable-bpgview            don\'t build bpgview
   --disable-jctvc              disable JCTVC encoder
   --enable-x265                enable x265 encoder
   --enable-jctvc-high          enable bit depths > 12 in JCTVC (need more tests to
@@ -69,6 +70,8 @@ EMCC=emcc
 DEBUG=disabled
 EXT=
 
+# Compile bpgview (SDL and SDL_image libraries needed)
+USE_BPGVIEW=y
 # Enable compilation of Javascript decoder with Emscripten
 USE_EMCC=no
 # Enable x265 for the encoder (you must install it before)
@@ -78,18 +81,23 @@ USE_JCTVC=y
 # Enable it to use bit depths > 12 (need more tests to validate encoder)
 USE_JCTVC_HIGH_BIT_DEPTH=no
 # Enable for compilation on MacOS X
-CONFIG_APPLE=no
+TARGET_OS=unix
 
 
 CFLAGS="-Wall -O3  -fno-asynchronous-unwind-tables -fdata-sections -ffunction-sections -fno-math-errno -fno-signed-zeros -fno-tree-vectorize -fomit-frame-pointer -I."
 CPPFLAGS="-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_REENTRANT -DCONFIG_BPG_VERSION=\\\"${VERSION}\\\""
-LDFLAGS="-L. -Wl,--as-needed"
+LDFLAGS="-L."
 LIBS="-lpng16 -lrt -lm -lpthread -lz"
 
 # Emscriptem config
-EMLDFLAGS="-s \"EXPORTED_FUNCTIONS=['_bpg_decoder_open','_bpg_decoder_decode','_bpg_decoder_get_info','_bpg_decoder_start','_bpg_decoder_get_line','_bpg_decoder_close','_malloc','_free']\" NO_FILESYSTEM=1 -s NO_BROWSER=1 -O3 --memory-init-file 0 --closure 1 --post-js post.js"
+EMLDFLAGS="-s \"EXPORTED_FUNCTIONS=['_bpg_decoder_open','_bpg_decoder_decode','_bpg_decoder_get_info','_bpg_decoder_start','_bpg_decoder_get_frame_duration','_bpg_decoder_get_line','_bpg_decoder_close','_malloc','_free']\""
 EMCFLAGS="$CFLAGS"
 
+XCFLAGS=
+XCPPFLAGS=
+XCXXFLAGS=
+XLDFLAGS=
+XLIBS=
 
 for opt; do
     optarg="${opt#*=}"
@@ -116,14 +124,17 @@ for opt; do
         --cross-prefix=*)
             CROSS="$optarg"
             ;;
+        --target-os=*)
+            TARGET_OS="$optarg"
+            ;;
         --enable-debug)
             DEBUG="enabled"
             ;;
-        --enable-osx)
-            CONFIG_APPLE="y"
-            ;;
         --enable-emcc)
             USE_EMCC="y"
+            ;;
+        --disable-bpgview)
+            USE_BPGVIEW="no"
             ;;
         --disable-jctvc)
             USE_JCTVC="no"
@@ -178,11 +189,19 @@ if [ "$USE_EMCC" = "y" ]; then
     test -n "$(which $EMCC 2> /dev/null)" || error_exit "'$EMCC' is not executable"
 fi
 
-if [ $CONFIG_APPLE = "y" ]; then
+if [ $TARGET_OS = "osx" ]; then
     LDFLAGS="${LDFLAGS} -Wl,-dead_strip"
+elif [ $TARGET_OS = "win32" ]; then
+    LIBS="-lrt"
+    LDFLAGS="${LDFLAGS} -static"
+elif [ $TARGET_OS = "unix" ]; then
+    LIBS="-lrt"
+    LDFLAGS="${LDFLAGS} -Wl,--gc-sections -Wl,--as-needed"
 else
-    LDFLAGS="${LDFLAGS} -Wl,--gc-sections"
+    error_exit "unknown OS '$TARGET_OS'"
 fi
+LIBS="${LIBS} -lm -lpthread"
+
 if [ $DEBUG = "enabled" ]; then
     CFLAGS="${CFLAGS} -g"
 fi
@@ -191,10 +210,7 @@ if [ $USE_JCTVC_HIGH_BIT_DEPTH = "y" ]; then
 fi
 
 
-
-
-
-cat >> libbpg.pc << EOF
+cat > libbpg.pc.in << EOF
 prefix=${prefix}
 exec_prefix=${prefix}
 libdir=${libdir}
@@ -204,7 +220,7 @@ Name: libbpg
 Description: library of functions for manipulating BPG image format files
 Version: ${VERSION}
 Libs: -L\${libdir} -lbpg
-Libs.private: -lpng16 -lrt -lm
+Libs.private: @BPGENC_LIBS@
 Cflags: -I\${includedir}
 EOF
 
@@ -223,10 +239,13 @@ CFLAGS += $CFLAGS $XCFLAGS
 CPPFLAGS += $CPPFLAGS $XCPPFLAGS
 CXXFLAGS += $CFLAGS $XCXXFLAGS
 LDFLAGS += $LDFLAGS $XLDFLAGS
+LIBS = $LIBS
 XLIBS = $XLIBS
 USE_EMCC = $USE_EMCC
 USE_X265 = $USE_X265
 USE_JCTVC = $USE_JCTVC
+USE_BPGVIEW = $USE_BPGVIEW
+$TARGET_OS = y
 EOF
 
 cat config.mak

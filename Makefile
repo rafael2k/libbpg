@@ -150,7 +150,7 @@ config.mak:
 	./configure
 
 libbpg.pc:
-	sed -e 's/@BPGENC_LIBS@/$(BPGENC_LIBS)/' $@.in > $@
+	sed -e 's:@BPGENC_LIBS@:$(BPGENC_LIBS):' $@.in > $@
 
 -include $(wildcard *.d)
 -include $(wildcard libavcodec/*.d)

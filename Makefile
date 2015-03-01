@@ -65,10 +65,11 @@ JCTVC_OBJS+=jctvc/TAppEncCfg.o jctvc/TAppEncTop.o jctvc/program_options_lite.o
 
 $(JCTVC_OBJS) jctvc_glue.o: CXXFLAGS+=-Ijctvc -Wno-sign-compare
 
-jctvc/libjctvc.a: $(JCTVC_OBJS)
-	$(AR) rcs $@ $^
+#jctvc/libjctvc.a: $(JCTVC_OBJS)
+#	$(AR) rcs $@ $^
 
-BPGENC_OBJS+=jctvc_glue.o jctvc/libjctvc.a
+BPGENC_OBJS+=jctvc_glue.o
+LIBBPG_OBJS+=$(JCTVC_OBJS)
 
 bpgenc.o: CFLAGS+=-DUSE_JCTVC
 endif # USE_JCTVC
@@ -85,16 +86,19 @@ endif
 
 bpgenc.o: CFLAGS+=-Wno-unused-but-set-variable
 
-libbpg.a: $(LIBBPG_OBJS) 
+libbpg.a: $(LIBBPG_OBJS)
 	$(AR) rcs $@ $^
 
-bpgdec$(EXE): bpgdec.o libbpg.a
+libbpg.so: libbpg.a
+	$(LD) -shared -Wl,-soname,$(SONAME) $(LDFLAGS) -o $@ $(LIBBPG_OBJS)
+
+bpgdec$(EXE): bpgdec.o $(LIBBPG)
 	$(LD) $(LDFLAGS) -o $@ $^ $(BPGDEC_LIBS)
 
-bpgenc$(EXE): $(BPGENC_OBJS)
+bpgenc$(EXE): $(BPGENC_OBJS) $(LIBBPG)
 	$(LD) $(LDFLAGS) -o $@ $^ $(BPGENC_LIBS)
 
-bpgview$(EXE): bpgview.o libbpg.a
+bpgview$(EXE): bpgview.o $(LIBBPG)
 	$(LD) $(LDFLAGS) -o $@ $^ $(BPGVIEW_LIBS)
 
 bpgdec.js: $(LIBBPG_JS_OBJS) post.js
@@ -119,12 +123,17 @@ install: libbpg.pc
 	install -m644 -D libbpg.a $(DESTDIR)$(libdir)
 	install -m644 -D libbpg.pc $(DESTDIR)$(libdir)/pkgconfig
 	install -m644 -D libbpg.h bpgenc.h $(DESTDIR)$(includedir)
+ifeq ($(LIBBPG),libbpg.so)
+	install -m644 -D $(LIBBPG) $(DESTDIR)$(libdir)/$(SONAME)
+	ln -s $(SONAME) $(DESTDIR)$(libdir)/libbpg-$(VERSION).so
+	ln -s $(SONAME) $(DESTDIR)$(libdir)/$(LIBBPG)
+endif
 
 CLEAN_DIRS=doc html libavcodec libavutil \
      jctvc jctvc/TLibEncoder jctvc/TLibVideoIO jctvc/TLibCommon jctvc/libmd5
 
 clean:
-	rm -f $(PROGS) libbpg.pc* *.o *.a *.d *~ $(addsuffix /*.o, $(CLEAN_DIRS)) \
+	rm -f $(PROGS) libbpg.pc* *.so *.so.* *.o *.a *.d *~ $(addsuffix /*.o, $(CLEAN_DIRS)) \
           $(addsuffix /*.d, $(CLEAN_DIRS)) $(addsuffix /*~, $(CLEAN_DIRS)) \
           $(addsuffix /*.a, $(CLEAN_DIRS))
 

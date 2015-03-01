@@ -65,9 +65,6 @@ JCTVC_OBJS+=jctvc/TAppEncCfg.o jctvc/TAppEncTop.o jctvc/program_options_lite.o
 
 $(JCTVC_OBJS) jctvc_glue.o: CXXFLAGS+=-Ijctvc -Wno-sign-compare
 
-#jctvc/libjctvc.a: $(JCTVC_OBJS)
-#	$(AR) rcs $@ $^
-
 BPGENC_OBJS+=jctvc_glue.o
 LIBBPG_OBJS+=$(JCTVC_OBJS)
 
@@ -89,6 +86,9 @@ bpgenc.o: CFLAGS+=-Wno-unused-but-set-variable
 libbpg.a: $(LIBBPG_OBJS)
 	$(AR) rcs $@ $^
 
+# Always build static library for devel packages.
+# But the linker needs $(LIBBPG_OBJS) to create a working
+# shared library.
 libbpg.so: libbpg.a
 	$(LD) -shared -Wl,-soname,$(SONAME) $(LDFLAGS) -o $@ $(LIBBPG_OBJS)
 

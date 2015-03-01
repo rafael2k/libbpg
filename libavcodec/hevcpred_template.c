@@ -239,13 +239,14 @@ do {                                  \
                 j = 0;
                 while (j < size_max_x && !IS_INTRA(j, -1))
                     j++;
-                if (j > 0)
+				if (j > 0) {
                     if (x0 > 0) {
                         EXTEND_LEFT_CIP(top, j, j + 1);
                     } else {
                         EXTEND_LEFT_CIP(top, j, j);
                         top[-1] = top[0];
                     }
+				}
                 left[-1] = top[-1];
             }
             left[-1] = top[-1];

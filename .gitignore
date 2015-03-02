@@ -1,0 +1,29 @@
+# autoreconf
+/autom4te.cache/
+/build-aux/
+/aclocal.m4
+/configure
+/Makefile.in
+
+# configure
+.deps/
+/config.log
+/config.status
+/libtool
+/Makefile
+
+# make
+.dirstamp
+
+# object code
+*.o
+*.lo
+*.a
+*.la
+
+# binaries
+/.libs/
+/bpgdec
+/bpgenc
+/bpgview
+

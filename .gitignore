@@ -12,8 +12,12 @@
 /libtool
 /Makefile
 
-# make
+# misc
 .dirstamp
+/doc/*.1
+/doc/*.5
+/doc/*.header
+/.libs/
 
 # object code
 *.o
@@ -22,7 +26,6 @@
 *.la
 
 # binaries
-/.libs/
 /bpgdec
 /bpgenc
 /bpgview

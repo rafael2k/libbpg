@@ -14,9 +14,9 @@
 
 # misc
 .dirstamp
-/doc/*.1
-/doc/*.5
-/doc/*.header
+/man/*.1
+/man/*.5
+/man/templates/*.header
 /.libs/
 
 # object code

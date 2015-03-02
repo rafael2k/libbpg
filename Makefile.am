@@ -5,8 +5,8 @@ lib_LTLIBRARIES = libbpg.la
 include_HEADERS = libbpg.h
 
 doc_DATA  = ChangeLog README doc/bpg_spec.txt
-man1_MANS = doc/bpgdec.1 doc/bpgenc.1 doc/bpgview.1
-man5_MANS = doc/bpg.5
+man1_MANS = man/bpgdec.1 man/bpgenc.1 man/bpgview.1
+man5_MANS = man/bpg.5
 
 CLEANFILES = $(man1_MANS) $(man5_MANS)
 
@@ -117,19 +117,19 @@ bpgview_SOURCES = bpgview.c
 bpgview_LDADD   = libbpg.la $(SDL_LIBS) $(SDL_IMAGE_LIBS)
 
 
-make_man1 = cat $@.header > $@; ./$^ >> $@ || true; cat $@.footer >> $@
+make_man1 = cat man/templates/$^.1.header > $@; ./$^ >> $@ || true; cat man/templates/$^.1.footer >> $@
 
-doc/bpgdec.1: bpgdec
+man/bpgdec.1: bpgdec
 	$(make_man1)
 
-doc/bpgenc.1: bpgenc
+man/bpgenc.1: bpgenc
 	$(make_man1)
 
-doc/bpgview.1: bpgview
+man/bpgview.1: bpgview
 	$(make_man1)
 
-doc/bpg.5:
-	cat $@.header > $@
+man/bpg.5:
+	cat man/templates/bpg.5.header > $@
 	cat doc/bpg_spec.txt >> $@
-	cat $@.footer >> $@
+	cat man/templates/bpg.5.footer >> $@
 

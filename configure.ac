@@ -84,10 +84,10 @@ AC_CHECK_FUNCS([floor localtime_r memchr memset pow rint sqrt strcasecmp strdup 
 
 
 AC_CONFIG_FILES([Makefile
-                 doc/bpg.5.header
-                 doc/bpgdec.1.header
-                 doc/bpgenc.1.header
-                 doc/bpgview.1.header
+                 man/templates/bpg.5.header
+                 man/templates/bpgdec.1.header
+                 man/templates/bpgenc.1.header
+                 man/templates/bpgview.1.header
                  ])
 AC_OUTPUT
 

@@ -1,4 +1,6 @@
+AM_CFLAGS   = -Wall -Wextra
 AM_CPPFLAGS = -DCONFIG_BPG_VERSION=\"@VERSION@\"
+AM_CXXFLAGS = -Wall -Wextra
 
 
 

@@ -32,7 +32,7 @@
 #ifndef LIBAVUTIL_OPENCL_H
 #define LIBAVUTIL_OPENCL_H
 
-#include "config.h"
+#include "ffmpeg-config.h"
 #if HAVE_CL_CL_H
 #include <CL/cl.h>
 #else

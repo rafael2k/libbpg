@@ -23,7 +23,7 @@
 
 #include <stdint.h>
 
-#include "config.h"
+#include "ffmpeg-config.h"
 #include "attributes.h"
 
 #if ARCH_ARM

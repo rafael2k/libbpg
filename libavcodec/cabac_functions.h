@@ -30,7 +30,7 @@
 #include <stdint.h>
 
 #include "cabac.h"
-#include "config.h"
+#include "ffmpeg-config.h"
 
 #ifndef UNCHECKED_BITSTREAM_READER
 #define UNCHECKED_BITSTREAM_READER !CONFIG_SAFE_BITSTREAM_READER

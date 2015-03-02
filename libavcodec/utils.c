@@ -25,7 +25,7 @@
  * utils.
  */
 
-#include "config.h"
+#include "ffmpeg-config.h"
 #include "libavutil/atomic.h"
 #include "libavutil/attributes.h"
 #include "libavutil/avassert.h"

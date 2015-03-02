@@ -80,7 +80,7 @@ extern attribute_deprecated const uint8_t av_reverse[256];
 #endif
 
 #ifdef HAVE_AV_CONFIG_H
-#   include "config.h"
+#   include "ffmpeg-config.h"
 #   include "intmath.h"
 #endif
 

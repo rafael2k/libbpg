@@ -21,7 +21,7 @@
 #ifndef AVUTIL_ATOMIC_H
 #define AVUTIL_ATOMIC_H
 
-#include "config.h"
+#include "ffmpeg-config.h"
 
 #if HAVE_ATOMICS_NATIVE
 

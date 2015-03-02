@@ -31,7 +31,7 @@
 #include "libavutil/mathematics.h"
 #include "libavutil/pixfmt.h"
 #include "avcodec.h"
-#include "config.h"
+#include "ffmpeg-config.h"
 
 #define FF_SANE_NB_CHANNELS 63U
 

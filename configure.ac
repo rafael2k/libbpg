@@ -84,6 +84,7 @@ AC_CHECK_FUNCS([floor localtime_r memchr memset pow rint sqrt strcasecmp strdup 
 
 
 AC_CONFIG_FILES([Makefile
+                 libbpg.pc
                  man/templates/bpg.5.header
                  man/templates/bpgdec.1.header
                  man/templates/bpgenc.1.header

@@ -1,14 +1,20 @@
 AM_CPPFLAGS = -DCONFIG_BPG_VERSION=\"@VERSION@\"
 
+
+
 bin_PROGRAMS    = bpgdec bpgenc bpgview
 lib_LTLIBRARIES = libbpg.la
 include_HEADERS = libbpg.h
+
+pkgconfiglibdir   = $(libdir)/pkgconfig
+pkgconfiglib_DATA = libbpg.pc
 
 doc_DATA  = ChangeLog README doc/bpg_spec.txt
 man1_MANS = man/bpgdec.1 man/bpgenc.1 man/bpgview.1
 man5_MANS = man/bpg.5
 
 CLEANFILES = $(man1_MANS) $(man5_MANS)
+
 
 
 libbpg_la_SOURCES = \
@@ -35,6 +41,9 @@ libbpg_la_SOURCES = \
 libbpg_la_CFLAGS = -Ilibavcodec \
 		-D_ISOC99_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 \
 		-DHAVE_AV_CONFIG_H -std=c99 -D_GNU_SOURCE=1 -DUSE_VAR_BIT_DEPTH -DUSE_PRED
+
+# name the shared library libbpg-VERSION.so.0 until the first official
+# libbpg.so.0 version is released
 libbpg_la_LDFLAGS = -release $(VERSION) -version-info 0:0:0
 
 
@@ -117,6 +126,15 @@ bpgview_SOURCES = bpgview.c
 bpgview_LDADD   = libbpg.la $(SDL_LIBS) $(SDL_IMAGE_LIBS)
 
 
+
+# hack libbpg.la to install the library as libbpg-VERSION.so.0 and create the following
+# symbolic links to it: libbpg-VERSION.so libbpg.so
+all-local:
+	[ ! -f libbpg.la ] || \
+		sed -i "s/library_names='libbpg-$(VERSION).so.0.0.0 libbpg-$(VERSION).so.0 libbpg.so'/library_names='libbpg-$(VERSION).so.0 libbpg-$(VERSION).so libbpg.so'/" libbpg.la
+
+
+
 make_man1 = cat man/templates/$^.1.header > $@; ./$^ >> $@ || true; cat man/templates/$^.1.footer >> $@
 
 man/bpgdec.1: bpgdec
@@ -132,4 +150,12 @@ man/bpg.5:
 	cat man/templates/bpg.5.header > $@
 	cat doc/bpg_spec.txt >> $@
 	cat man/templates/bpg.5.footer >> $@
+
+
+
+# remove '-ljpeg' from the dependency line inside libbpg.la since
+# the library doesn't actually depend on it (temporary solution)
+install-exec-hook:
+	[ ! -f $(DESTDIR)$(libdir)/libbpg.la ] || sed -i 's/-ljpeg//' $(DESTDIR)$(libdir)/libbpg.la
+
 

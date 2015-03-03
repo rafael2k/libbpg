@@ -3,7 +3,7 @@
 #AC_PREREQ([2.69])
 AC_INIT([libbpg],
          m4_esyscmd([printf $(cat ./VERSION)]),
-		[http://bellard.org/bpg/])
+        [http://bellard.org/bpg/])
 AC_CONFIG_SRCDIR([bpgenc.c])
 
 AC_CONFIG_AUX_DIR([build-aux])

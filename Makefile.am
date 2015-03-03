@@ -1,6 +1,6 @@
-AM_CFLAGS   = -Wall -Wextra
+AM_CFLAGS   = -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter
 AM_CPPFLAGS = -DCONFIG_BPG_VERSION=\"@VERSION@\"
-AM_CXXFLAGS = -Wall -Wextra
+AM_CXXFLAGS = $(AM_CFLAGS)
 
 
 
@@ -40,7 +40,8 @@ libbpg_la_SOURCES = \
 		libavutil/pixdesc.c \
 		libavutil/md5.c \
 		libbpg.c
-libbpg_la_CFLAGS = -Ilibavcodec \
+libbpg_la_CFLAGS   = $(AM_CFLAGS) -Ilibavcodec
+libbpg_la_CPPFLAGS = $(AM_CPPFLAGS) \
 		-D_ISOC99_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 \
 		-DHAVE_AV_CONFIG_H -std=c99 -D_GNU_SOURCE=1 -DUSE_VAR_BIT_DEPTH -DUSE_PRED
 
@@ -56,8 +57,9 @@ bpgdec_LDADD   = libbpg.la $(PNG16_LIBS)
 
 
 bpgenc_SOURCES  = bpgenc.c
-bpgenc_CFLAGS   = $(PNG16_CFLAGS)
-bpgenc_CXXFLAGS =
+bpgenc_CFLAGS   = $(AM_CFLAGS) $(PNG16_CFLAGS)
+bpgenc_CPPFLAGS = $(AM_CPPFLAGS)
+bpgenc_CXXFLAGS = $(AM_CXXFLAGS)
 bpgenc_LDADD    = libbpg.la $(PNG16_LIBS)
 
 if USE_JCTVC
@@ -112,14 +114,14 @@ bpgenc_SOURCES += jctvc_glue.cpp \
 		jctvc/TAppEncTop.cpp \
 		jctvc/TAppEncCfg.cpp \
 		jctvc/libmd5/libmd5.c
-bpgenc_CFLAGS   += -DUSE_JCTVC
-bpgenc_CXXFLAGS += -DUSE_JCTVC -Ijctvc
+bpgenc_CPPFLAGS += -DUSE_JCTVC
+bpgenc_CXXFLAGS += -Ijctvc
 endif
 
 if USE_X265
-bpgenc_SOURCES += x265_glue.c
-bpgenc_CFLAGS  += -DUSE_X265
-bpgenc_LDADD   += -lx265
+bpgenc_SOURCES  += x265_glue.c
+bpgenc_CPPFLAGS += -DUSE_X265
+bpgenc_LDADD    += -lx265
 endif
 
 

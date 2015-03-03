@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.
 
-#AC_PREREQ([2.69])
+AC_PREREQ([2.64])
 AC_INIT([libbpg],
          m4_esyscmd([printf $(cat ./VERSION)]),
         [http://bellard.org/bpg/])
@@ -14,6 +14,11 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_PROG_CXX
 AC_PROG_CC
 LT_INIT
+
+
+# Prevent unnecessary linking on some systems.
+m4_include([ax_check_link_flag.m4])
+AX_CHECK_LINK_FLAG([-Wl,--as-needed], [LDFLAGS="${LDFLAGS} -Wl,--as-needed"])
 
 
 # Checks for libraries.

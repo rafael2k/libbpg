@@ -19,9 +19,17 @@ LT_INIT
 # Checks for libraries.
 AC_CHECK_LIB([m], [sqrt], [], [exit 1])
 AC_CHECK_LIB([jpeg], [jpeg_CreateCompress], [], [exit 1])
-PKG_CHECK_MODULES([PNG16], [libpng16])
-PKG_CHECK_MODULES([SDL], [sdl])
-PKG_CHECK_MODULES([SDL_IMAGE], [SDL_image])
+PKG_CHECK_MODULES([PNG16], [libpng16], [], [
+    AC_CHECK_LIB([png], [png_set_alpha_mode], [], [
+        AC_CHECK_LIB([png16], [png_set_alpha_mode], [], [exit 1])
+    ])
+])
+PKG_CHECK_MODULES([SDL], [sdl], [], [
+    AC_CHECK_LIB([SDL], [SDL_Init], [], [exit 1])
+])
+PKG_CHECK_MODULES([SDL_IMAGE], [SDL_image], [], [
+    AC_CHECK_LIB([SDL_image], [IMG_Load], [], [exit 1])
+])
 
 # x265
 AC_CHECK_LIB([x265], [x265_encoder_encode], [x265="true"], [x265="false"])

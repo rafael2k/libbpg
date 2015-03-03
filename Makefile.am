@@ -134,8 +134,7 @@ bpgview_LDADD   = libbpg.la $(SDL_LIBS) $(SDL_IMAGE_LIBS)
 # hack libbpg.la to install the library as libbpg-VERSION.so.0 and create the following
 # symbolic links to it: libbpg-VERSION.so libbpg.so
 all-local:
-	[ ! -f libbpg.la ] || \
-		sed -i "s/library_names='libbpg-$(VERSION).so.0.0.0 libbpg-$(VERSION).so.0 libbpg.so'/library_names='libbpg-$(VERSION).so.0 libbpg-$(VERSION).so libbpg.so'/" libbpg.la
+	[ ! -f libbpg.la ] || sed -i "s/library_names='libbpg-$(VERSION).so.0.0.0 libbpg-$(VERSION).so.0 libbpg.so'/library_names='libbpg-$(VERSION).so.0 libbpg-$(VERSION).so libbpg.so'/" libbpg.la
 
 
 

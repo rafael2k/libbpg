@@ -4,7 +4,7 @@ AC_PREREQ([2.64])
 AC_INIT([libbpg],
          m4_esyscmd([printf $(cat ./VERSION)]),
         [http://bellard.org/bpg/])
-AC_CONFIG_SRCDIR([bpgenc.c])
+AC_CONFIG_SRCDIR([source/bpgenc.c])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
@@ -97,6 +97,7 @@ AC_CHECK_FUNCS([floor localtime_r memchr memset pow rint sqrt strcasecmp strdup 
 
 
 AC_CONFIG_FILES([Makefile
+                 source/Makefile
                  libbpg.pc
                  man/templates/bpg.5.header
                  man/templates/bpgdec.1.header

@@ -3,7 +3,7 @@
 /build-aux/
 /aclocal.m4
 /configure
-/Makefile.in
+Makefile.in
 
 # configure
 .deps/
@@ -11,14 +11,14 @@
 /config.status
 /libbpg.pc
 /libtool
-/Makefile
+Makefile
 
 # misc
 .dirstamp
 /man/*.1
 /man/*.5
 /man/templates/*.header
-/.libs/
+/source/.libs/
 
 # object code
 *.o
@@ -27,7 +27,7 @@
 *.la
 
 # binaries
-/bpgdec
-/bpgenc
-/bpgview
+/source/bpgdec
+/source/bpgenc
+/source/bpgview
 

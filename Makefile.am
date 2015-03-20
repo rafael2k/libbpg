@@ -6,7 +6,7 @@ pkgconfiglibdir   = $(libdir)/pkgconfig
 pkgconfiglib_DATA = libbpg.pc
 
 doc_DATA  = ChangeLog README doc/bpg_spec.txt
-man1_MANS = man/bpgdec.1 man/bpgenc.1 man/bpgview.1
+man1_MANS = man/bpgdec.1 man/bpgenc.1 man/bpgmux.1 man/bpgview.1
 man5_MANS = man/bpg.5
 
 CLEANFILES = $(man1_MANS) $(man5_MANS)
@@ -17,13 +17,16 @@ make_man1 = \
 	$^ >> $@ || true ; \
 	cat man/templates/`basename $^`.1.footer >> $@
 
-man/bpgdec.1: source/bpgdec
+man/bpgdec.1: bpgdec
 	$(make_man1)
 
-man/bpgenc.1: source/bpgenc
+man/bpgenc.1: bpgenc
 	$(make_man1)
 
-man/bpgview.1: source/bpgview
+man/bpgmux.1: bpgmux
+	$(make_man1)
+
+man/bpgview.1: bpgview
 	$(make_man1)
 
 man/bpg.5:

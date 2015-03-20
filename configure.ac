@@ -109,6 +109,7 @@ AC_CHECK_TYPES([ptrdiff_t])
 
 
 # Checks for library functions.
+AC_FUNC_ERROR_AT_LINE
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_FUNC_STRTOD
@@ -121,6 +122,7 @@ AC_CONFIG_FILES([Makefile
                  man/templates/bpg.5.header
                  man/templates/bpgdec.1.header
                  man/templates/bpgenc.1.header
+                 man/templates/bpgmux.1.header
                  man/templates/bpgview.1.header
                  ])
 AC_OUTPUT

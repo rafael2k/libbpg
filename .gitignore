@@ -9,6 +9,7 @@
 /m4/lt~obsolete.m4
 /config.h.in
 /configure
+/configure.scan
 Makefile.in
 
 # configure

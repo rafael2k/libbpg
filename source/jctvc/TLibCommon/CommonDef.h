@@ -38,6 +38,10 @@
 #ifndef __COMMONDEF__
 #define __COMMONDEF__
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <algorithm>
 #include <iostream>
 #include <assert.h>

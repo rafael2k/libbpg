@@ -240,7 +240,8 @@ static int parse_slice(const uint8_t *buf, const int len, const int nut,
             }
 
             if (!short_term_ref_pic_set_sps_flag) {
-                uint32_t num_neg_pics, num_pos_pics, delta_poc_s0_minus1;
+                uint32_t num_neg_pics, num_pos_pics;
+                uint32_t delta_poc_s0_minus1 = 0;
 
                 num_neg_pics = get_ue_golomb(gb);
                 num_pos_pics = get_ue_golomb(gb);

@@ -3,7 +3,7 @@
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
  *
- * Copyright (c) 2010-2014, ITU/ISO/IEC
+ * Copyright (c) 2010-2015, ITU/ISO/IEC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -78,14 +78,20 @@ TComPicYuv::~TComPicYuv()
 
 
 
-Void TComPicYuv::create( const Int  iPicWidth,    const  Int iPicHeight,    const ChromaFormat chromaFormatIDC,
-                         const UInt uiMaxCUWidth, const UInt uiMaxCUHeight, const UInt uiMaxCUDepth )
+Void TComPicYuv::create ( const Int iPicWidth,
+                          const Int iPicHeight,
+                          const ChromaFormat chromaFormatIDC,
+                          const UInt uiMaxCUWidth,  ///< used for generating offsets to CUs. Can use iPicWidth if no offsets are required
+                          const UInt uiMaxCUHeight, ///< used for generating offsets to CUs. Can use iPicHeight if no offsets are required
+                          const UInt uiMaxCUDepth,  ///< used for generating offsets to CUs. Can use 0 if no offsets are required
+                          const Bool bUseMargin)    ///< if true, then a margin of uiMaxCUWidth+16 and uiMaxCUHeight+16 is created around the image.
+
 {
   m_iPicWidth         = iPicWidth;
   m_iPicHeight        = iPicHeight;
   m_chromaFormatIDC   = chromaFormatIDC;
-  m_iMarginX          = g_uiMaxCUWidth  + 16; // for 16-byte alignment
-  m_iMarginY          = g_uiMaxCUHeight + 16;  // margin for 8-tap filter and infinite padding
+  m_iMarginX          = (bUseMargin?uiMaxCUWidth:0) + 16; // for 16-byte alignment
+  m_iMarginY          = (bUseMargin?uiMaxCUHeight:0) + 16;  // margin for 8-tap filter and infinite padding
   m_bIsBorderExtended = false;
 
   // assign the picture arrays and set up the ptr to the top left of the original picture
@@ -117,8 +123,12 @@ Void TComPicYuv::create( const Int  iPicWidth,    const  Int iPicHeight,    cons
     m_ctuOffsetInBuffer[chan] = new Int[numCuInWidth * numCuInHeight];
 
     for (Int cuRow = 0; cuRow < numCuInHeight; cuRow++)
+    {
       for (Int cuCol = 0; cuCol < numCuInWidth; cuCol++)
+      {
         m_ctuOffsetInBuffer[chan][cuRow * numCuInWidth + cuCol] = stride * cuRow * ctuHeight + cuCol * ctuWidth;
+      }
+    }
 
     m_subCuOffsetInBuffer[chan] = new Int[(size_t)1 << (2 * uiMaxCUDepth)];
 
@@ -127,8 +137,12 @@ Void TComPicYuv::create( const Int  iPicWidth,    const  Int iPicHeight,    cons
     const Int minSubBlockWidth     =(ctuWidth  >> uiMaxCUDepth);
 
     for (Int buRow = 0; buRow < numSubBlockPartitions; buRow++)
+    {
       for (Int buCol = 0; buCol < numSubBlockPartitions; buCol++)
+      {
         m_subCuOffsetInBuffer[chan][(buRow << uiMaxCUDepth) + buCol] = stride  * buRow * minSubBlockHeight + buCol * minSubBlockWidth;
+      }
+    }
   }
   return;
 }
@@ -141,13 +155,25 @@ Void TComPicYuv::destroy()
   {
     m_piPicOrg[chan] = NULL;
 
-    if( m_apiPicBuf[chan] ){ xFree( m_apiPicBuf[chan] );    m_apiPicBuf[chan] = NULL; }
+    if( m_apiPicBuf[chan] )
+    {
+      xFree( m_apiPicBuf[chan] );
+      m_apiPicBuf[chan] = NULL;
+    }
   }
 
   for(UInt chan=0; chan<MAX_NUM_CHANNEL_TYPE; chan++)
   {
-    if (m_ctuOffsetInBuffer[chan]) delete[] m_ctuOffsetInBuffer[chan]; m_ctuOffsetInBuffer[chan] = NULL;
-    if (m_subCuOffsetInBuffer[chan]) delete[] m_subCuOffsetInBuffer[chan]; m_subCuOffsetInBuffer[chan] = NULL;
+    if (m_ctuOffsetInBuffer[chan])
+    {
+      delete[] m_ctuOffsetInBuffer[chan];
+      m_ctuOffsetInBuffer[chan] = NULL;
+    }
+    if (m_subCuOffsetInBuffer[chan])
+    {
+      delete[] m_subCuOffsetInBuffer[chan];
+      m_subCuOffsetInBuffer[chan] = NULL;
+    }
   }
 }
 
@@ -170,7 +196,10 @@ Void  TComPicYuv::copyToPic (TComPicYuv*  pcPicYuvDst) const
 
 Void TComPicYuv::extendPicBorder ()
 {
-  if ( m_bIsBorderExtended ) return;
+  if ( m_bIsBorderExtended )
+  {
+    return;
+  }
 
   for(Int chan=0; chan<getNumberValidComponents(); chan++)
   {
@@ -217,7 +246,7 @@ Void TComPicYuv::extendPicBorder ()
 
 
 // NOTE: This function is never called, but may be useful for developers.
-Void TComPicYuv::dump (const Char* pFileName, Bool bAdd) const
+Void TComPicYuv::dump (const Char* pFileName, const BitDepths &bitDepths, Bool bAdd) const
 {
   FILE* pFile;
   if (!bAdd)
@@ -233,7 +262,7 @@ Void TComPicYuv::dump (const Char* pFileName, Bool bAdd) const
   for(Int chan = 0; chan < getNumberValidComponents(); chan++)
   {
     const ComponentID  ch     = ComponentID(chan);
-    const Int          shift  = g_bitDepth[toChannelType(ch)] - 8;
+    const Int          shift  = bitDepths.recon[toChannelType(ch)] - 8;
     const Int          offset = (shift>0)?(1<<(shift-1)):0;
     const Pel         *pi     = getAddr(ch);
     const Int          stride = getStride(ch);

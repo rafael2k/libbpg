@@ -3,7 +3,7 @@
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
  *
- * Copyright (c) 2010-2014, ITU/ISO/IEC
+ * Copyright (c) 2010-2015, ITU/ISO/IEC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -91,11 +91,11 @@ Void TEncTop::create ()
 
   // create processing unit classes
   m_cGOPEncoder.        create( );
-  m_cSliceEncoder.      create( getSourceWidth(), getSourceHeight(), m_chromaFormatIDC, g_uiMaxCUWidth, g_uiMaxCUHeight, g_uiMaxCUDepth );
-  m_cCuEncoder.         create( g_uiMaxCUDepth, g_uiMaxCUWidth, g_uiMaxCUHeight, m_chromaFormatIDC );
+  m_cSliceEncoder.      create( getSourceWidth(), getSourceHeight(), m_chromaFormatIDC, m_maxCUWidth, m_maxCUHeight, m_maxTotalCUDepth );
+  m_cCuEncoder.         create( m_maxTotalCUDepth, m_maxCUWidth, m_maxCUHeight, m_chromaFormatIDC );
   if (m_bUseSAO)
   {
-    m_cEncSAO.create( getSourceWidth(), getSourceHeight(), m_chromaFormatIDC, g_uiMaxCUWidth, g_uiMaxCUHeight, g_uiMaxCUDepth, m_saoOffsetBitShift[CHANNEL_TYPE_LUMA], m_saoOffsetBitShift[CHANNEL_TYPE_CHROMA] );
+    m_cEncSAO.create( getSourceWidth(), getSourceHeight(), m_chromaFormatIDC, m_maxCUWidth, m_maxCUHeight, m_maxTotalCUDepth, m_saoOffsetBitShift[CHANNEL_TYPE_LUMA], m_saoOffsetBitShift[CHANNEL_TYPE_CHROMA] );
 #if SAO_ENCODE_ALLOW_USE_PREDEBLOCK
     m_cEncSAO.createEncData(getSaoCtuBoundary());
 #else
@@ -109,22 +109,22 @@ Void TEncTop::create ()
   }
 #endif
 
-  m_cLoopFilter.create( g_uiMaxCUDepth );
+  m_cLoopFilter.create( m_maxTotalCUDepth );
 
   if ( m_RCEnableRateControl )
   {
     m_cRateCtrl.init( m_framesToBeEncoded, m_RCTargetBitrate, m_iFrameRate, m_iGOPSize, m_iSourceWidth, m_iSourceHeight,
-                      g_uiMaxCUWidth, g_uiMaxCUHeight, m_RCKeepHierarchicalBit, m_RCUseLCUSeparateModel, m_GOPList );
+        m_maxCUWidth, m_maxCUHeight, m_RCKeepHierarchicalBit, m_RCUseLCUSeparateModel, m_GOPList );
   }
 
-  m_pppcRDSbacCoder = new TEncSbac** [g_uiMaxCUDepth+1];
+  m_pppcRDSbacCoder = new TEncSbac** [m_maxTotalCUDepth+1];
 #if FAST_BIT_EST
-  m_pppcBinCoderCABAC = new TEncBinCABACCounter** [g_uiMaxCUDepth+1];
+  m_pppcBinCoderCABAC = new TEncBinCABACCounter** [m_maxTotalCUDepth+1];
 #else
-  m_pppcBinCoderCABAC = new TEncBinCABAC** [g_uiMaxCUDepth+1];
+  m_pppcBinCoderCABAC = new TEncBinCABAC** [m_maxTotalCUDepth+1];
 #endif
 
-  for ( Int iDepth = 0; iDepth < g_uiMaxCUDepth+1; iDepth++ )
+  for ( Int iDepth = 0; iDepth < m_maxTotalCUDepth+1; iDepth++ )
   {
     m_pppcRDSbacCoder[iDepth] = new TEncSbac* [CI_NUM];
 #if FAST_BIT_EST
@@ -152,15 +152,12 @@ Void TEncTop::destroy ()
   m_cGOPEncoder.        destroy();
   m_cSliceEncoder.      destroy();
   m_cCuEncoder.         destroy();
-  if (m_cSPS.getUseSAO())
-  {
-    m_cEncSAO.destroyEncData();
-    m_cEncSAO.destroy();
-  }
+  m_cEncSAO.            destroyEncData();
+  m_cEncSAO.            destroy();
   m_cLoopFilter.        destroy();
   m_cRateCtrl.          destroy();
   Int iDepth;
-  for ( iDepth = 0; iDepth < g_uiMaxCUDepth+1; iDepth++ )
+  for ( iDepth = 0; iDepth < m_maxTotalCUDepth+1; iDepth++ )
   {
     for (Int iCIIdx = 0; iCIIdx < CI_NUM; iCIIdx ++ )
     {
@@ -169,7 +166,7 @@ Void TEncTop::destroy ()
     }
   }
 
-  for ( iDepth = 0; iDepth < g_uiMaxCUDepth+1; iDepth++ )
+  for ( iDepth = 0; iDepth < m_maxTotalCUDepth+1; iDepth++ )
   {
     delete [] m_pppcRDSbacCoder[iDepth];
     delete [] m_pppcBinCoderCABAC[iDepth];
@@ -188,15 +185,11 @@ Void TEncTop::init(Bool isFieldCoding)
 {
   // initialize SPS
   xInitSPS();
-
-  // set the VPS profile information
-  *m_cVPS.getPTL() = *m_cSPS.getPTL();
-  m_cVPS.getTimingInfo()->setTimingInfoPresentFlag       ( false );
+  xInitVPS();
 
   m_cRdCost.setCostMode(m_costMode);
 
   // initialize PPS
-  m_cPPS.setSPS(&m_cSPS);
   xInitPPS();
   xInitRPS(isFieldCoding);
 
@@ -213,6 +206,9 @@ Void TEncTop::init(Bool isFieldCoding)
   m_cTrQuant.init( 1 << m_uiQuadtreeTULog2MaxSize,
                    m_useRDOQ,
                    m_useRDOQTS,
+#if T0196_SELECTIVE_RDOQ
+                   m_useSelectiveRDOQ,
+#endif
                    true
                   ,m_useTransformSkipFast
 #if ADAPTIVE_QP_SELECTION
@@ -221,9 +217,70 @@ Void TEncTop::init(Bool isFieldCoding)
                   );
 
   // initialize encoder search class
-  m_cSearch.init( this, &m_cTrQuant, m_iSearchRange, m_bipredSearchRange, m_iFastSearch, 0, &m_cEntropyCoder, &m_cRdCost, getRDSbacCoder(), getRDGoOnSbacCoder() );
+  m_cSearch.init( this, &m_cTrQuant, m_iSearchRange, m_bipredSearchRange, m_iFastSearch, m_maxCUWidth, m_maxCUHeight, m_maxTotalCUDepth, &m_cEntropyCoder, &m_cRdCost, getRDSbacCoder(), getRDGoOnSbacCoder() );
 
   m_iMaxRefPicNum = 0;
+
+  xInitScalingLists();
+}
+
+Void TEncTop::xInitScalingLists()
+{
+  // Initialise scaling lists
+  // The encoder will only use the SPS scaling lists. The PPS will never be marked present.
+  const Int maxLog2TrDynamicRange[MAX_NUM_CHANNEL_TYPE] =
+  {
+      m_cSPS.getMaxLog2TrDynamicRange(CHANNEL_TYPE_LUMA),
+      m_cSPS.getMaxLog2TrDynamicRange(CHANNEL_TYPE_CHROMA)
+  };
+  if(getUseScalingListId() == SCALING_LIST_OFF)
+  {
+    getTrQuant()->setFlatScalingList(m_cSPS.getChromaFormatIdc(), maxLog2TrDynamicRange, m_cSPS.getBitDepths());
+    getTrQuant()->setUseScalingList(false);
+    m_cSPS.setScalingListPresentFlag(false);
+    m_cPPS.setScalingListPresentFlag(false);
+  }
+  else if(getUseScalingListId() == SCALING_LIST_DEFAULT)
+  {
+    m_cSPS.getScalingList().setDefaultScalingList ();
+    m_cSPS.setScalingListPresentFlag(false);
+    m_cPPS.setScalingListPresentFlag(false);
+
+    getTrQuant()->setScalingList(&(m_cSPS.getScalingList()), m_cSPS.getChromaFormatIdc(), maxLog2TrDynamicRange, m_cSPS.getBitDepths());
+    getTrQuant()->setUseScalingList(true);
+  }
+  else if(getUseScalingListId() == SCALING_LIST_FILE_READ)
+  {
+    m_cSPS.getScalingList().setDefaultScalingList ();
+    if(m_cSPS.getScalingList().xParseScalingList(getScalingListFile()))
+    {
+      Bool bParsedScalingList=false; // Use of boolean so that assertion outputs useful string
+      assert(bParsedScalingList);
+      exit(1);
+    }
+    m_cSPS.getScalingList().checkDcOfMatrix();
+    m_cSPS.setScalingListPresentFlag(m_cSPS.getScalingList().checkDefaultScalingList());
+    m_cPPS.setScalingListPresentFlag(false);
+    getTrQuant()->setScalingList(&(m_cSPS.getScalingList()), m_cSPS.getChromaFormatIdc(), maxLog2TrDynamicRange, m_cSPS.getBitDepths());
+    getTrQuant()->setUseScalingList(true);
+  }
+  else
+  {
+    printf("error : ScalingList == %d not supported\n",getUseScalingListId());
+    assert(0);
+  }
+
+  // Prepare delta's:
+  for(UInt sizeId = 0; sizeId < SCALING_LIST_SIZE_NUM; sizeId++)
+  {
+    const Int predListStep = (sizeId == SCALING_LIST_32x32? (SCALING_LIST_NUM/NUMBER_OF_PREDICTION_MODES) : 1); // if 32x32, skip over chroma entries.
+
+    for(UInt listId = 0; listId < SCALING_LIST_NUM; listId+=predListStep)
+    {
+      m_cSPS.getScalingList().checkPredMode( sizeId, listId );
+    }
+  }
+
 }
 
 // ====================================================================================================================
@@ -252,8 +309,10 @@ Void TEncTop::deletePicBuffer()
  .
  \param   flush               cause encoder to encode a partial GOP
  \param   pcPicYuvOrg         original YUV picture
+ \param   pcPicYuvTrueOrg
+ \param   snrCSC
  \retval  rcListPicYuvRecOut  list of reconstruction YUV pictures
- \retval  rcListBitstreamOut  list of output bitstreams
+ \retval  accessUnitsOut      list of output access units
  \retval  iNumEncoded         number of encoded pictures
  */
 Void TEncTop::encode( Bool flush, TComPicYuv* pcPicYuvOrg, TComPicYuv* pcPicYuvTrueOrg, const InputColourSpaceConversion snrCSC, TComList<TComPicYuv*>& rcListPicYuvRecOut, std::list<AccessUnit>& accessUnitsOut, Int& iNumEncoded )
@@ -348,7 +407,7 @@ Void TEncTop::encode(Bool flush, TComPicYuv* pcPicYuvOrg, TComPicYuv* pcPicYuvTr
         else
         {
           rpcPicYuvRec = new TComPicYuv;
-          rpcPicYuvRec->create( m_iSourceWidth, m_iSourceHeight, m_chromaFormatIDC, g_uiMaxCUWidth, g_uiMaxCUHeight, g_uiMaxCUDepth);
+          rpcPicYuvRec->create( m_iSourceWidth, m_iSourceHeight, m_chromaFormatIDC, m_maxCUWidth, m_maxCUHeight, m_maxTotalCUDepth, true);
         }
         rcListPicYuvRecOut.pushBack( rpcPicYuvRec );
       }
@@ -410,7 +469,10 @@ Void TEncTop::encode(Bool flush, TComPicYuv* pcPicYuvOrg, TComPicYuv* pcPicYuvTr
  */
 Void TEncTop::xGetNewPicBuffer ( TComPic*& rpcPic )
 {
+  // At this point, the SPS and PPS can be considered activated - they are copied to the new TComPic.
+
   TComSlice::sortPicList(m_cListPic);
+
 
   if (m_cListPic.size() >= (UInt)(m_iGOPSize + getMaxDecPicBuffering(MAX_TLAYER-1) + 2) )
   {
@@ -430,13 +492,13 @@ Void TEncTop::xGetNewPicBuffer ( TComPic*& rpcPic )
     if ( getUseAdaptiveQP() )
     {
       TEncPic* pcEPic = new TEncPic;
-      pcEPic->create( m_iSourceWidth, m_iSourceHeight, m_chromaFormatIDC, g_uiMaxCUWidth, g_uiMaxCUHeight, g_uiMaxCUDepth, m_cPPS.getMaxCuDQPDepth()+1, m_conformanceWindow, m_defaultDisplayWindow, m_numReorderPics);
+      pcEPic->create( m_cSPS, m_cPPS, m_cPPS.getMaxCuDQPDepth()+1, false);
       rpcPic = pcEPic;
     }
     else
     {
       rpcPic = new TComPic;
-      rpcPic->create( m_iSourceWidth, m_iSourceHeight, m_chromaFormatIDC, g_uiMaxCUWidth, g_uiMaxCUHeight, g_uiMaxCUDepth, m_conformanceWindow, m_defaultDisplayWindow, m_numReorderPics, false );
+      rpcPic->create( m_cSPS, m_cPPS, false );
     }
 
     m_cListPic.pushBack( rpcPic );
@@ -449,6 +511,24 @@ Void TEncTop::xGetNewPicBuffer ( TComPic*& rpcPic )
   rpcPic->getSlice(0)->setPOC( m_iPOCLast );
   // mark it should be extended
   rpcPic->getPicYuvRec()->setBorderExtension(false);
+}
+
+Void TEncTop::xInitVPS()
+{
+  // The SPS must have already been set up.
+  // set the VPS profile information.
+  *m_cVPS.getPTL() = *m_cSPS.getPTL();
+  m_cVPS.setMaxOpSets(1);
+  m_cVPS.getTimingInfo()->setTimingInfoPresentFlag       ( false );
+  m_cVPS.setNumHrdParameters( 0 );
+
+  m_cVPS.createHrdParamBuffer();
+  for( UInt i = 0; i < m_cVPS.getNumHrdParameters(); i ++ )
+  {
+    m_cVPS.setHrdOpSetIdx( 0, i );
+    m_cVPS.setCprmsPresentFlag( false, i );
+    // Set up HrdParameters here.
+  }
 }
 
 Void TEncTop::xInitSPS()
@@ -467,7 +547,7 @@ Void TEncTop::xInitSPS()
   profileTierLevel.setIntraConstraintFlag(m_intraConstraintFlag);
   profileTierLevel.setLowerBitRateConstraintFlag(m_lowerBitRateConstraintFlag);
 
-  if ((m_profile == Profile::MAIN10) && (g_bitDepth[CHANNEL_TYPE_LUMA] == 8) && (g_bitDepth[CHANNEL_TYPE_CHROMA] == 8))
+  if ((m_profile == Profile::MAIN10) && (m_bitDepth[CHANNEL_TYPE_LUMA] == 8) && (m_bitDepth[CHANNEL_TYPE_CHROMA] == 8))
   {
     /* The above constraint is equal to Profile::MAIN */
     profileTierLevel.setProfileCompatibilityFlag(Profile::MAIN, 1);
@@ -481,15 +561,16 @@ Void TEncTop::xInitSPS()
   /* XXX: may be a good idea to refactor the above into a function
    * that chooses the actual compatibility based upon options */
 
-  m_cSPS.setPicWidthInLumaSamples         ( m_iSourceWidth      );
-  m_cSPS.setPicHeightInLumaSamples        ( m_iSourceHeight     );
-  m_cSPS.setConformanceWindow             ( m_conformanceWindow );
-  m_cSPS.setMaxCUWidth    ( g_uiMaxCUWidth      );
-  m_cSPS.setMaxCUHeight   ( g_uiMaxCUHeight     );
-  m_cSPS.setMaxCUDepth    ( g_uiMaxCUDepth      );
+  m_cSPS.setPicWidthInLumaSamples  ( m_iSourceWidth      );
+  m_cSPS.setPicHeightInLumaSamples ( m_iSourceHeight     );
+  m_cSPS.setConformanceWindow      ( m_conformanceWindow );
+  m_cSPS.setMaxCUWidth             ( m_maxCUWidth        );
+  m_cSPS.setMaxCUHeight            ( m_maxCUHeight       );
+  m_cSPS.setMaxTotalCUDepth        ( m_maxTotalCUDepth   );
   m_cSPS.setChromaFormatIdc( m_chromaFormatIDC);
+  m_cSPS.setLog2DiffMaxMinCodingBlockSize(m_log2DiffMaxMinCodingBlockSize);
 
-  Int minCUSize = m_cSPS.getMaxCUWidth() >> ( m_cSPS.getMaxCUDepth()-g_uiAddCUDepth );
+  Int minCUSize = m_cSPS.getMaxCUWidth() >> ( m_cSPS.getLog2DiffMaxMinCodingBlockSize() );
   Int log2MinCUSize = 0;
   while(minCUSize > 1)
   {
@@ -498,7 +579,6 @@ Void TEncTop::xInitSPS()
   }
 
   m_cSPS.setLog2MinCodingBlockSize(log2MinCUSize);
-  m_cSPS.setLog2DiffMaxMinCodingBlockSize(m_cSPS.getMaxCUDepth()-g_uiAddCUDepth-getMaxCUDepthOffset(m_cSPS.getChromaFormatIdc(), m_cSPS.getQuadtreeTULog2MinSize()));
 
   m_cSPS.setPCMLog2MinSize (m_uiPCMLog2MinSize);
   m_cSPS.setUsePCM        ( m_usePCM           );
@@ -509,31 +589,20 @@ Void TEncTop::xInitSPS()
   m_cSPS.setQuadtreeTUMaxDepthInter( m_uiQuadtreeTUMaxDepthInter    );
   m_cSPS.setQuadtreeTUMaxDepthIntra( m_uiQuadtreeTUMaxDepthIntra    );
 
-  m_cSPS.setTMVPFlagsPresent(false);
+  m_cSPS.setTMVPFlagsPresent((getTMVPModeId() == 2 || getTMVPModeId() == 1));
 
   m_cSPS.setMaxTrSize   ( 1 << m_uiQuadtreeTULog2MaxSize );
 
-  Int i;
-
-  for (i = 0; i < g_uiMaxCUDepth-g_uiAddCUDepth; i++ )
-  {
-    m_cSPS.setAMPAcc( i, m_useAMP );
-    //m_cSPS.setAMPAcc( i, 1 );
-  }
-
   m_cSPS.setUseAMP ( m_useAMP );
-
-  for (i = g_uiMaxCUDepth-g_uiAddCUDepth; i < g_uiMaxCUDepth; i++ )
-  {
-    m_cSPS.setAMPAcc(i, 0);
-  }
-
 
   for (UInt channelType = 0; channelType < MAX_NUM_CHANNEL_TYPE; channelType++)
   {
-    m_cSPS.setBitDepth    (ChannelType(channelType), g_bitDepth[channelType]            );
-    m_cSPS.setQpBDOffset  (ChannelType(channelType), (6 * (g_bitDepth[channelType] - 8)));
-    m_cSPS.setPCMBitDepth (ChannelType(channelType), g_PCMBitDepth[channelType]         );
+    m_cSPS.setBitDepth      (ChannelType(channelType), m_bitDepth[channelType] );
+#if O0043_BEST_EFFORT_DECODING
+    m_cSPS.setStreamBitDepth(ChannelType(channelType), m_bitDepth[channelType] );
+#endif
+    m_cSPS.setQpBDOffset  (ChannelType(channelType), (6 * (m_bitDepth[channelType] - 8)));
+    m_cSPS.setPCMBitDepth (ChannelType(channelType), m_PCMBitDepth[channelType]         );
   }
 
   m_cSPS.setUseExtendedPrecision(m_useExtendedPrecision);
@@ -553,7 +622,7 @@ Void TEncTop::xInitSPS()
   m_cSPS.setMaxTLayers( m_maxTempLayer );
   m_cSPS.setTemporalIdNestingFlag( ( m_maxTempLayer == 1 ) ? true : false );
 
-  for ( i = 0; i < min(m_cSPS.getMaxTLayers(),(UInt) MAX_TLAYER); i++ )
+  for (Int i = 0; i < min(m_cSPS.getMaxTLayers(),(UInt) MAX_TLAYER); i++ )
   {
     m_cSPS.setMaxDecPicBuffering(m_maxDecPicBuffering[i], i);
     m_cSPS.setNumReorderPics(m_numReorderPics[i], i);
@@ -561,7 +630,7 @@ Void TEncTop::xInitSPS()
 
   m_cSPS.setPCMFilterDisableFlag  ( m_bPCMFilterDisableFlag );
   m_cSPS.setDisableIntraReferenceSmoothing( m_disableIntraReferenceSmoothing );
-  m_cSPS.setScalingListFlag ( (m_useScalingListId == 0) ? 0 : 1 );
+  m_cSPS.setScalingListFlag ( (m_useScalingListId == SCALING_LIST_OFF) ? 0 : 1 );
   m_cSPS.setUseStrongIntraSmoothing( m_useStrongIntraSmoothing );
   m_cSPS.setVuiParametersPresentFlag(getVuiParametersPresentFlag());
 
@@ -600,6 +669,22 @@ Void TEncTop::xInitSPS()
     pcVUI->setLog2MaxMvLengthHorizontal(getLog2MaxMvLengthHorizontal());
     pcVUI->setLog2MaxMvLengthVertical(getLog2MaxMvLengthVertical());
   }
+  m_cSPS.setNumLongTermRefPicSPS(NUM_LONG_TERM_REF_PIC_SPS);
+  assert (NUM_LONG_TERM_REF_PIC_SPS <= MAX_NUM_LONG_TERM_REF_PICS);
+  for (Int k = 0; k < NUM_LONG_TERM_REF_PIC_SPS; k++)
+  {
+    m_cSPS.setLtRefPicPocLsbSps(k, 0);
+    m_cSPS.setUsedByCurrPicLtSPSFlag(k, 0);
+  }
+  if( getPictureTimingSEIEnabled() || getDecodingUnitInfoSEIEnabled() )
+  {
+    Bool useDUParameters = (getSliceMode() > 0) || (getSliceSegmentMode() > 0);
+    m_cSPS.setHrdParameters( getFrameRate(), useDUParameters, getTargetBitrate(), ( getIntraPeriod() > 0 ) );
+  }
+  if( getBufferingPeriodSEIEnabled() || getPictureTimingSEIEnabled() || getDecodingUnitInfoSEIEnabled() )
+  {
+    m_cSPS.getVuiParameters()->setHrdParametersPresentFlag( true );
+  }
 }
 
 Void TEncTop::xInitPPS()
@@ -612,19 +697,26 @@ Void TEncTop::xInitPPS()
     bUseDQP = true;
   }
 
-  if (m_costMode==COST_SEQUENCE_LEVEL_LOSSLESS || m_costMode==COST_LOSSLESS_CODING) bUseDQP=false;
+  if (m_costMode==COST_SEQUENCE_LEVEL_LOSSLESS || m_costMode==COST_LOSSLESS_CODING)
+  {
+    bUseDQP=false;
+  }
 
-  if(bUseDQP)
+
+  if ( m_RCEnableRateControl )
+  {
+    m_cPPS.setUseDQP(true);
+    m_cPPS.setMaxCuDQPDepth( 0 );
+  }
+  else if(bUseDQP)
   {
     m_cPPS.setUseDQP(true);
     m_cPPS.setMaxCuDQPDepth( m_iMaxCuDQPDepth );
-    m_cPPS.setMinCuDQPSize( m_cPPS.getSPS()->getMaxCUWidth() >> ( m_cPPS.getMaxCuDQPDepth()) );
   }
   else
   {
     m_cPPS.setUseDQP(false);
     m_cPPS.setMaxCuDQPDepth( 0 );
-    m_cPPS.setMinCuDQPSize( m_cPPS.getSPS()->getMaxCUWidth() >> ( m_cPPS.getMaxCuDQPDepth()) );
   }
 
   if ( m_maxCUChromaQpAdjustmentDepth >= 0 )
@@ -639,19 +731,9 @@ Void TEncTop::xInitPPS()
     m_cPPS.clearChromaQpAdjTable();
   }
 
-  if ( m_RCEnableRateControl )
-  {
-    m_cPPS.setUseDQP(true);
-    m_cPPS.setMaxCuDQPDepth( 0 );
-    m_cPPS.setMinCuDQPSize( m_cPPS.getSPS()->getMaxCUWidth() >> ( m_cPPS.getMaxCuDQPDepth()) );
-  }
-
-  m_cPPS.setMinCuChromaQpAdjSize( m_cPPS.getSPS()->getMaxCUWidth() >> ( m_cPPS.getMaxCuChromaQpAdjDepth()) );
-
   m_cPPS.setQpOffset(COMPONENT_Cb, m_chromaCbQpOffset );
   m_cPPS.setQpOffset(COMPONENT_Cr, m_chromaCrQpOffset );
 
-  m_cPPS.setNumSubstreams(m_iWaveFrontSubstreams);
   m_cPPS.setEntropyCodingSyncEnabledFlag( m_iWaveFrontSynchro > 0 );
   m_cPPS.setTilesEnabledFlag( (m_iNumColumnsMinus1 > 0 || m_iNumRowsMinus1 > 0) );
   m_cPPS.setUseWP( m_useWeightedPred );
@@ -672,10 +754,23 @@ Void TEncTop::xInitPPS()
   else
   {
     m_cPPS.setDeblockingFilterControlPresentFlag (m_DeblockingFilterControlPresent );
+
+    if (m_cPPS.getDeblockingFilterControlPresentFlag())
+    {
+      m_cPPS.setDeblockingFilterOverrideEnabledFlag( !getLoopFilterOffsetInPPS() );
+      m_cPPS.setPicDisableDeblockingFilterFlag( getLoopFilterDisable() );
+    }
+  }
+
+  if (m_cPPS.getDeblockingFilterControlPresentFlag() && ! m_cPPS.getPicDisableDeblockingFilterFlag())
+  {
+    m_cPPS.setDeblockingFilterBetaOffsetDiv2( getLoopFilterBetaOffset() );
+    m_cPPS.setDeblockingFilterTcOffsetDiv2( getLoopFilterTcOffset() );
   }
   m_cPPS.setLog2ParallelMergeLevelMinus2   (m_log2ParallelMergeLevelMinus2 );
   m_cPPS.setCabacInitPresentFlag(CABAC_INIT_PRESENT_FLAG);
   m_cPPS.setLoopFilterAcrossSlicesEnabledFlag( m_bLFCrossSliceBoundaryFlag );
+
 
   Int histogram[MAX_NUM_REF + 1];
   for( Int i = 0; i <= MAX_NUM_REF; i++ )
@@ -744,13 +839,13 @@ Void TEncTop::xInitRPS(Bool isFieldCoding)
     rps->setNumberOfPositivePictures(numPos);
 
     // handle inter RPS intialization from the config file.
-#if AUTO_INTER_RPS
     rps->setInterRPSPrediction(ge.m_interRPSPrediction > 0);  // not very clean, converting anything > 0 to true.
     rps->setDeltaRIdxMinus1(0);                               // index to the Reference RPS is always the previous one.
-    TComReferencePictureSet*     RPSRef = rpsList->getReferencePictureSet(i-1);  // get the reference RPS
+    TComReferencePictureSet*     RPSRef = i>0 ? rpsList->getReferencePictureSet(i-1): NULL;  // get the reference RPS
 
     if (ge.m_interRPSPrediction == 2)  // Automatic generation of the inter RPS idc based on the RIdx provided.
     {
+      assert (RPSRef!=NULL);
       Int deltaRPS = getGOPEntry(i-1).m_POC - ge.m_POC;  // the ref POC - current POC
       Int numRefDeltaPOC = RPSRef->getNumberOfPictures();
 
@@ -779,6 +874,7 @@ Void TEncTop::xInitRPS(Bool isFieldCoding)
     }
     else if (ge.m_interRPSPrediction == 1)  // inter RPS idc based on the RefIdc values provided in config file.
     {
+      assert (RPSRef!=NULL);
       rps->setDeltaRPS(ge.m_deltaRPS);
       rps->setNumRefIdc(ge.m_numRefIdc);
       for (Int j = 0; j < ge.m_numRefIdc; j++ )
@@ -786,7 +882,7 @@ Void TEncTop::xInitRPS(Bool isFieldCoding)
         rps->setRefIdc(j, ge.m_refIdc[j]);
       }
 #if WRITE_BACK
-      // the folowing code overwrite the deltaPOC and Used by current values read from the config file with the ones
+      // the following code overwrite the deltaPOC and Used by current values read from the config file with the ones
       // computed from the RefIdc.  A warning is printed if they are not identical.
       numNeg = 0;
       numPos = 0;
@@ -841,47 +937,6 @@ Void TEncTop::xInitRPS(Bool isFieldCoding)
       }
 #endif
     }
-#else
-    rps->setInterRPSPrediction(ge.m_interRPSPrediction);
-    if (ge.m_interRPSPrediction)
-    {
-      rps->setDeltaRIdxMinus1(0);
-      rps->setDeltaRPS(ge.m_deltaRPS);
-      rps->setNumRefIdc(ge.m_numRefIdc);
-      for (Int j = 0; j < ge.m_numRefIdc; j++ )
-      {
-        rps->setRefIdc(j, ge.m_refIdc[j]);
-      }
-#if WRITE_BACK
-      // the folowing code overwrite the deltaPOC and Used by current values read from the config file with the ones
-      // computed from the RefIdc.  This is not necessary if both are identical. Currently there is no check to see if they are identical.
-      numNeg = 0;
-      numPos = 0;
-      TComReferencePictureSet*     RPSRef = m_RPSList.getReferencePictureSet(i-1);
-
-      for (Int j = 0; j < ge.m_numRefIdc; j++ )
-      {
-        if (ge.m_refIdc[j])
-        {
-          Int deltaPOC = ge.m_deltaRPS + ((j < RPSRef->getNumberOfPictures())? RPSRef->getDeltaPOC(j) : 0);
-          rps->setDeltaPOC((numNeg+numPos),deltaPOC);
-          rps->setUsed((numNeg+numPos),ge.m_refIdc[j]==1?1:0);
-          if (deltaPOC<0)
-          {
-            numNeg++;
-          }
-          else
-          {
-            numPos++;
-          }
-        }
-      }
-      rps->setNumberOfNegativePictures(numNeg);
-      rps->setNumberOfPositivePictures(numPos);
-      rps->sortDeltaPOC();
-#endif
-    }
-#endif //INTER_RPS_AUTO
   }
   //In case of field coding, we need to set special parameters for the first bottom field of the sequence, since it is not specified in the cfg file.
   //The position = GOPSize + extraRPSs which is (a priori) unused is reserved for this field in the RPS.
@@ -937,7 +992,9 @@ Void TEncTop::selectReferencePictureSet(TComSlice* slice, Int POCCurr, Int GOPid
     slice->setRPSidx(m_iGOPSize+m_extraRPSs);
   }
 
-  slice->setRPS(getSPS()->getRPSList()->getReferencePictureSet(slice->getRPSidx()));
+  TComReferencePictureSet *rps=slice->getLocalRPS();
+  (*rps) = *(slice->getSPS()->getRPSList()->getReferencePictureSet(slice->getRPSidx()));
+  slice->setRPS(rps);
   slice->getRPS()->setNumberOfPictures(slice->getRPS()->getNumberOfNegativePictures()+slice->getRPS()->getNumberOfPositivePictures());
 }
 
@@ -984,20 +1041,12 @@ Void  TEncTop::xInitPPSforTiles()
   m_cPPS.setLoopFilterAcrossTilesEnabledFlag( m_loopFilterAcrossTilesEnabledFlag );
 
   // # substreams is "per tile" when tiles are independent.
-  if (m_iWaveFrontSynchro )
-  {
-    m_cPPS.setNumSubstreams(m_iWaveFrontSubstreams * (m_iNumColumnsMinus1+1));
-  }
-  else
-  {
-    m_cPPS.setNumSubstreams((m_iNumRowsMinus1+1) * (m_iNumColumnsMinus1+1));
-  }
 }
 
 Void  TEncCfg::xCheckGSParameters()
 {
-  Int   iWidthInCU = ( m_iSourceWidth%g_uiMaxCUWidth ) ? m_iSourceWidth/g_uiMaxCUWidth + 1 : m_iSourceWidth/g_uiMaxCUWidth;
-  Int   iHeightInCU = ( m_iSourceHeight%g_uiMaxCUHeight ) ? m_iSourceHeight/g_uiMaxCUHeight + 1 : m_iSourceHeight/g_uiMaxCUHeight;
+  Int   iWidthInCU = ( m_iSourceWidth%m_maxCUWidth ) ? m_iSourceWidth/m_maxCUWidth + 1 : m_iSourceWidth/m_maxCUWidth;
+  Int   iHeightInCU = ( m_iSourceHeight%m_maxCUHeight ) ? m_iSourceHeight/m_maxCUHeight + 1 : m_iSourceHeight/m_maxCUHeight;
   UInt  uiCummulativeColumnWidth = 0;
   UInt  uiCummulativeRowHeight = 0;
 
@@ -1044,7 +1093,9 @@ Void  TEncCfg::xCheckGSParameters()
   if( m_iNumRowsMinus1 && !m_tileUniformSpacingFlag )
   {
     for(Int i=0; i<m_iNumRowsMinus1; i++)
+    {
       uiCummulativeRowHeight += m_tileRowHeight[i];
+    }
 
     if( uiCummulativeRowHeight >= iHeightInCU )
     {

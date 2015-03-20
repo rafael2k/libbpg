@@ -3,7 +3,7 @@
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
  *
- * Copyright (c) 2010-2014, ITU/ISO/IEC
+ * Copyright (c) 2010-2015, ITU/ISO/IEC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -81,6 +81,7 @@
 // ====================================================================================================================
 // Tool Switches
 // ====================================================================================================================
+#define T0196_SELECTIVE_RDOQ                              1 ///< selective RDOQ
 
 #define HARMONIZE_GOP_FIRST_FIELD_COUPLE                  1
 #define EFFICIENT_FIELD_IRAP                              1
@@ -170,7 +171,6 @@
 #define NUM_INTRA_MODE                                   36
 
 #define WRITE_BACK                                        1           ///< Enable/disable the encoder to replace the deltaPOC and Used by current from the config file with the values derived by the refIdc parameter.
-#define AUTO_INTER_RPS                                    1           ///< Enable/disable the automatic generation of refIdc from the deltaPOC and Used by current from the config file.
 #define PRINT_RPS_INFO                                    0           ///< Enable/disable the printing of bits used to send the RPS.
                                                                         // using one nearest frame as reference frame, and the other frames are high quality (POC%4==0) frames (1+X)
                                                                         // this should be done with encoder only decision
@@ -214,6 +214,7 @@
 #define CHROMA_INTERPOLATION_FILTER_SUB_SAMPLE_POSITIONS  8
 
 #define MAX_NUM_LONG_TERM_REF_PICS                       33
+#define NUM_LONG_TERM_REF_PIC_SPS                         0
 
 #define DECODER_CHECK_SUBSTREAM_AND_SLICE_TRAILING_BYTES  1
 
@@ -221,6 +222,7 @@
 
 #define O0043_BEST_EFFORT_DECODING                        0 ///< 0 (default) = disable code related to best effort decoding, 1 = enable code relating to best effort decoding [ decode-side only ].
 
+#define MAX_QP_OFFSET_LIST_SIZE                           6 ///< Maximum size of QP offset list is 6 entries
 // Cost mode support
 
 #define LOSSLESS_AND_MIXED_LOSSLESS_RD_COST_TEST_QP       0 ///< QP to use for lossless coding.
@@ -249,7 +251,6 @@
 #define RExt__PREDICTION_WEIGHTING_ANALYSIS_DC_PRECISION                       0 ///< Additional fixed bit precision used during encoder-side weighting prediction analysis. Currently only used when high_precision_prediction_weighting_flag is set, for backwards compatibility reasons.
 
 #define MAX_TIMECODE_SEI_SETS                                                  3 ///< Maximum number of time sets
-
 
 //------------------------------------------------
 // Derived macros
@@ -736,6 +737,16 @@ private:
 };
 
 
+struct BitDepths
+{
+#if O0043_BEST_EFFORT_DECODING
+  Int recon[MAX_NUM_CHANNEL_TYPE]; ///< the bit depth used for reconstructing the video
+  Int stream[MAX_NUM_CHANNEL_TYPE];///< the bit depth used indicated in the SPS
+#else
+  Int recon[MAX_NUM_CHANNEL_TYPE]; ///< the bit depth as indicated in the SPS
+#endif
+};
+
 /// parameters for deblocking filter
 typedef struct _LFCUParam
 {
@@ -758,19 +769,27 @@ struct TUEntropyCodingParameters
 };
 
 
-struct TComDigest
+struct TComPictureHash
 {
   std::vector<UChar> hash;
 
-  Bool operator==(const TComDigest &other) const
+  Bool operator==(const TComPictureHash &other) const
   {
-    if (other.hash.size() != hash.size()) return false;
+    if (other.hash.size() != hash.size())
+    {
+      return false;
+    }
     for(UInt i=0; i<UInt(hash.size()); i++)
-      if (other.hash[i] != hash[i]) return false;
+    {
+      if (other.hash[i] != hash[i])
+      {
+        return false;
+      }
+    }
     return true;
   }
 
-  Bool operator!=(const TComDigest &other) const
+  Bool operator!=(const TComPictureHash &other) const
   {
     return !(*this == other);
   }

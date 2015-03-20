@@ -3,7 +3,7 @@
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
  *
- * Copyright (c) 2010-2014, ITU/ISO/IEC
+ * Copyright (c) 2010-2015, ITU/ISO/IEC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -79,7 +79,11 @@ Void TComYuv::destroy()
   // memory free
   for(Int ch=0; ch<MAX_NUM_COMPONENT; ch++)
   {
-    if (m_apiBuf[ch]!=NULL) { xFree( m_apiBuf[ch] ); m_apiBuf[ch] = NULL; }
+    if (m_apiBuf[ch]!=NULL)
+    {
+      xFree( m_apiBuf[ch] );
+      m_apiBuf[ch] = NULL;
+    }
   }
 }
 
@@ -88,7 +92,9 @@ Void TComYuv::clear()
   for(Int ch=0; ch<MAX_NUM_COMPONENT; ch++)
   {
     if (m_apiBuf[ch]!=NULL)
+    {
       ::memset( m_apiBuf[ch], 0, ( getWidth(ComponentID(ch)) * getHeight(ComponentID(ch))  )*sizeof(Pel) );
+    }
   }
 }
 
@@ -98,7 +104,9 @@ Void TComYuv::clear()
 Void TComYuv::copyToPicYuv   ( TComPicYuv* pcPicYuvDst, const UInt ctuRsAddr, const UInt uiAbsZorderIdx, const UInt uiPartDepth, const UInt uiPartIdx ) const
 {
   for(Int ch=0; ch<getNumberValidComponents(); ch++)
+  {
     copyToPicComponent  ( ComponentID(ch), pcPicYuvDst, ctuRsAddr, uiAbsZorderIdx, uiPartDepth, uiPartIdx );
+  }
 }
 
 Void TComYuv::copyToPicComponent  ( const ComponentID ch, TComPicYuv* pcPicYuvDst, const UInt ctuRsAddr, const UInt uiAbsZorderIdx, const UInt uiPartDepth, const UInt uiPartIdx ) const
@@ -126,7 +134,9 @@ Void TComYuv::copyToPicComponent  ( const ComponentID ch, TComPicYuv* pcPicYuvDs
 Void TComYuv::copyFromPicYuv   ( const TComPicYuv* pcPicYuvSrc, const UInt ctuRsAddr, const UInt uiAbsZorderIdx )
 {
   for(Int ch=0; ch<getNumberValidComponents(); ch++)
+  {
     copyFromPicComponent  ( ComponentID(ch), pcPicYuvSrc, ctuRsAddr, uiAbsZorderIdx );
+  }
 }
 
 Void TComYuv::copyFromPicComponent  ( const ComponentID ch, const TComPicYuv* pcPicYuvSrc, const UInt ctuRsAddr, const UInt uiAbsZorderIdx )
@@ -153,7 +163,9 @@ Void TComYuv::copyFromPicComponent  ( const ComponentID ch, const TComPicYuv* pc
 Void TComYuv::copyToPartYuv( TComYuv* pcYuvDst, const UInt uiDstPartIdx ) const
 {
   for(Int ch=0; ch<getNumberValidComponents(); ch++)
+  {
     copyToPartComponent  ( ComponentID(ch), pcYuvDst, uiDstPartIdx );
+  }
 }
 
 Void TComYuv::copyToPartComponent( const ComponentID ch, TComYuv* pcYuvDst, const UInt uiDstPartIdx ) const
@@ -180,7 +192,9 @@ Void TComYuv::copyToPartComponent( const ComponentID ch, TComYuv* pcYuvDst, cons
 Void TComYuv::copyPartToYuv( TComYuv* pcYuvDst, const UInt uiSrcPartIdx ) const
 {
   for(Int ch=0; ch<getNumberValidComponents(); ch++)
+  {
     copyPartToComponent  ( ComponentID(ch), pcYuvDst, uiSrcPartIdx );
+  }
 }
 
 Void TComYuv::copyPartToComponent( const ComponentID ch, TComYuv* pcYuvDst, const UInt uiSrcPartIdx ) const
@@ -208,7 +222,9 @@ Void TComYuv::copyPartToComponent( const ComponentID ch, TComYuv* pcYuvDst, cons
 Void TComYuv::copyPartToPartYuv   ( TComYuv* pcYuvDst, const UInt uiPartIdx, const UInt iWidth, const UInt iHeight ) const
 {
   for(Int ch=0; ch<getNumberValidComponents(); ch++)
+  {
     copyPartToPartComponent   (ComponentID(ch), pcYuvDst, uiPartIdx, iWidth>>getComponentScaleX(ComponentID(ch)), iHeight>>getComponentScaleY(ComponentID(ch)) );
+  }
 }
 
 Void TComYuv::copyPartToPartComponent  ( const ComponentID ch, TComYuv* pcYuvDst, const UInt uiPartIdx, const UInt iWidthComponent, const UInt iHeightComponent ) const
@@ -261,7 +277,7 @@ Void TComYuv::copyPartToPartComponentMxN  ( const ComponentID ch, TComYuv* pcYuv
 
 
 
-Void TComYuv::addClip( const TComYuv* pcYuvSrc0, const TComYuv* pcYuvSrc1, const UInt uiTrUnitIdx, const UInt uiPartSize )
+Void TComYuv::addClip( const TComYuv* pcYuvSrc0, const TComYuv* pcYuvSrc1, const UInt uiTrUnitIdx, const UInt uiPartSize, const BitDepths &clipBitDepths )
 {
   for(Int chan=0; chan<getNumberValidComponents(); chan++)
   {
@@ -276,9 +292,9 @@ Void TComYuv::addClip( const TComYuv* pcYuvSrc0, const TComYuv* pcYuvSrc1, const
     const UInt iSrc0Stride = pcYuvSrc0->getStride(ch);
     const UInt iSrc1Stride = pcYuvSrc1->getStride(ch);
     const UInt iDstStride  = getStride(ch);
-    const Int clipbd = g_bitDepth[toChannelType(ch)];
+    const Int clipbd = clipBitDepths.recon[toChannelType(ch)];
 #if O0043_BEST_EFFORT_DECODING
-    const Int bitDepthDelta = g_bitDepthInStream[toChannelType(ch)] - g_bitDepth[toChannelType(ch)];
+    const Int bitDepthDelta = clipBitDepths.stream[toChannelType(ch)] - clipbd;
 #endif
 
     for ( Int y = uiPartHeight-1; y >= 0; y-- )
@@ -333,7 +349,7 @@ Void TComYuv::subtract( const TComYuv* pcYuvSrc0, const TComYuv* pcYuvSrc1, cons
 
 
 
-Void TComYuv::addAvg( const TComYuv* pcYuvSrc0, const TComYuv* pcYuvSrc1, const UInt iPartUnitIdx, const UInt uiWidth, const UInt uiHeight )
+Void TComYuv::addAvg( const TComYuv* pcYuvSrc0, const TComYuv* pcYuvSrc1, const UInt iPartUnitIdx, const UInt uiWidth, const UInt uiHeight, const BitDepths &clipBitDepths )
 {
   for(Int chan=0; chan<getNumberValidComponents(); chan++)
   {
@@ -345,7 +361,7 @@ Void TComYuv::addAvg( const TComYuv* pcYuvSrc0, const TComYuv* pcYuvSrc1, const 
     const UInt  iSrc0Stride = pcYuvSrc0->getStride(ch);
     const UInt  iSrc1Stride = pcYuvSrc1->getStride(ch);
     const UInt  iDstStride  = getStride(ch);
-    const Int   clipbd      = g_bitDepth[toChannelType(ch)];
+    const Int   clipbd      = clipBitDepths.recon[toChannelType(ch)];
     const Int   shiftNum    = std::max<Int>(2, (IF_INTERNAL_PREC - clipbd)) + 1;
     const Int   offset      = ( 1 << ( shiftNum - 1 ) ) + 2 * IF_INTERNAL_OFFS;
 

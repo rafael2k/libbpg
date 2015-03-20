@@ -30,6 +30,10 @@
 #error missing -D__STDC_CONSTANT_MACROS / #define __STDC_CONSTANT_MACROS
 #endif
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>

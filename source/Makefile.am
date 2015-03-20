@@ -123,11 +123,13 @@ bpgview_LDADD   = libbpg.la $(SDL_LIBS) $(SDL_IMAGE_LIBS)
 
 
 JAVASCRIPTS =
+EMCFLAGS :=
 if USE_EMCC
 JAVASCRIPTS += bpgdec.js bpgdec8.js bpgdec8a.js
 CLEANFILES   = $(JAVASCRIPTS)
 
-EMCFLAGS := -I. $(CFLAGS) $(CPPFLAGS)
+EMCFLAGS += -I. -I.. $(AM_CFLAGS) $(AM_CPPFLAGS)
+EMCFLAGS += -DHAVE_CONFIG_H
 EMCFLAGS += -D_ISOC99_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -DHAVE_AV_CONFIG_H -std=c99 -D_GNU_SOURCE=1
 
 EMLDFLAGS := -s "EXPORTED_FUNCTIONS=['_bpg_decoder_open','_bpg_decoder_decode','_bpg_decoder_get_info','_bpg_decoder_start','_bpg_decoder_get_frame_duration','_bpg_decoder_get_line','_bpg_decoder_close','_malloc','_free']"

@@ -33,6 +33,9 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_image.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "libbpg.h"
 
 typedef enum {

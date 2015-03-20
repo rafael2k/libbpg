@@ -25,6 +25,9 @@
 extern "C" {
 #endif
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "libbpg.h"
 
 typedef struct {

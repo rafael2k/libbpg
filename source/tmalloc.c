@@ -32,6 +32,10 @@
 #endif
 #include <assert.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 /*
  * Note: only works for 32 bit pointers
  */

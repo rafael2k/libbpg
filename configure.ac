@@ -4,6 +4,7 @@ AC_PREREQ([2.64])
 AC_INIT([libbpg],
          m4_esyscmd([printf $(cat ./VERSION)]),
         [http://bellard.org/bpg/])
+AC_CONFIG_HEADER([config.h])
 AC_CONFIG_SRCDIR([source/bpgenc.c])
 
 AC_CONFIG_MACRO_DIR([m4])

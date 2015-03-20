@@ -35,6 +35,9 @@
 #include <png.h>
 #endif
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "libbpg.h"
 
 static void ppm_save(BPGDecoderContext *img, const char *filename)

@@ -144,8 +144,8 @@ static void pred_weight_table(HEVCContext *s, GetBitContext *gb)
     int j = 0;
     uint8_t luma_weight_l0_flag[16];
     uint8_t chroma_weight_l0_flag[16];
-    uint8_t luma_weight_l1_flag[16];
-    uint8_t chroma_weight_l1_flag[16];
+    //uint8_t luma_weight_l1_flag[16];
+    //uint8_t chroma_weight_l1_flag[16];
 
     s->sh.luma_log2_weight_denom = get_ue_golomb_long(gb);
     if (s->sps->chroma_format_idc != 0) {
@@ -282,6 +282,7 @@ static int decode_lt_rps(HEVCContext *s, LongTermRPS *rps, GetBitContext *gb)
 }
 #endif
 
+/*
 static int get_buffer_sao(HEVCContext *s, AVFrame *frame, const HEVCSPS *sps)
 {
     int ret, i;
@@ -299,6 +300,7 @@ static int get_buffer_sao(HEVCContext *s, AVFrame *frame, const HEVCSPS *sps)
 
     return 0;
 }
+*/
 
 static int set_sps(HEVCContext *s, const HEVCSPS *sps)
 {
@@ -1658,7 +1660,8 @@ static void hls_prediction_unit(HEVCContext *s, int x0, int y0,
 
     MvField *tab_mvf = s->ref->tab_mvf;
     RefPicList  *refPicList = s->ref->refPicList;
-    HEVCFrame *ref0, *ref1;
+    HEVCFrame *ref0 = 0;
+    HEVCFrame *ref1 = 0;
     uint8_t *dst0 = POS(0, x0, y0);
     uint8_t *dst1 = POS(1, x0, y0);
     uint8_t *dst2 = POS(2, x0, y0);
@@ -1784,7 +1787,7 @@ static void hls_prediction_unit(HEVCContext *s, int x0, int y0,
             int y0_c = y0 >> s->sps->vshift[1];
             int nPbW_c = nPbW >> s->sps->hshift[1];
             int nPbH_c = nPbH >> s->sps->vshift[1];
-            
+
             chroma_mc_uni(s, dst1, s->frame->linesize[1], ref0->frame->data[1], ref0->frame->linesize[1],
                           0, x0_c, y0_c, nPbW_c, nPbH_c, &current_mv,
                           s->sh.chroma_weight_l0[current_mv.ref_idx[0]][0], s->sh.chroma_offset_l0[current_mv.ref_idx[0]][0]);
@@ -2177,7 +2180,7 @@ static int hls_coding_unit(HEVCContext *s, int x0, int y0, int log2_cb_size)
             }
 #endif
             if (lc->cu.rqt_root_cbf) {
-                const static int cbf[2] = { 0 };
+                static const int cbf[2] = { 0 };
                 lc->cu.max_trafo_depth = lc->cu.pred_mode == MODE_INTRA ?
                                          s->sps->max_transform_hierarchy_depth_intra + lc->cu.intra_split_flag :
                                          s->sps->max_transform_hierarchy_depth_inter;
@@ -2724,7 +2727,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
 
     switch (s->nal_unit_type) {
 #ifdef USE_MSPS
-    case 48:
+    case NAL_48:
         ret = ff_hevc_decode_nal_sps(s);
         if (ret < 0)
             goto fail;

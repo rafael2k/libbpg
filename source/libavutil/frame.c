@@ -64,6 +64,7 @@ static void get_frame_defaults(AVFrame *frame)
     frame->chroma_location     = AVCHROMA_LOC_UNSPECIFIED;
 }
 
+/*
 static void free_side_data(AVFrameSideData **ptr_sd)
 {
     AVFrameSideData *sd = *ptr_sd;
@@ -71,6 +72,7 @@ static void free_side_data(AVFrameSideData **ptr_sd)
     av_freep(&sd->data);
     av_freep(ptr_sd);
 }
+*/
 
 AVFrame *av_frame_alloc(void)
 {

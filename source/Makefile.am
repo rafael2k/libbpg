@@ -1,4 +1,4 @@
-AM_CFLAGS   = -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter
+AM_CFLAGS   = -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter -Wno-unused-but-set-variable
 AM_CPPFLAGS = -DCONFIG_BPG_VERSION=\"@VERSION@\"
 AM_CXXFLAGS = $(AM_CFLAGS)
 
@@ -73,7 +73,7 @@ bpgenc_SOURCES += jctvc_glue.cpp \
 		jctvc/TLibEncoder/TEncRateCtrl.cpp \
 		jctvc/TLibEncoder/TEncPreanalyzer.cpp \
 		jctvc/TLibEncoder/NALwrite.cpp \
-		jctvc/TLibEncoder/TEncAnalyze.cpp \
+		jctvc/TLibEncoder/SEIEncoder.cpp \
 		jctvc/TLibEncoder/TEncSbac.cpp \
 		jctvc/TLibEncoder/TEncEntropy.cpp \
 		jctvc/TLibCommon/TComWeightPrediction.cpp \
@@ -128,7 +128,7 @@ if USE_EMCC
 JAVASCRIPTS += bpgdec.js bpgdec8.js bpgdec8a.js
 CLEANFILES   = $(JAVASCRIPTS)
 
-EMCFLAGS += -I. -I.. $(AM_CFLAGS) $(AM_CPPFLAGS)
+EMCFLAGS += -Wall -Wno-unused-function -Wno-unused-variable -I. -I.. $(AM_CPPFLAGS)
 EMCFLAGS += -DHAVE_CONFIG_H
 EMCFLAGS += -D_ISOC99_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -DHAVE_AV_CONFIG_H -std=c99 -D_GNU_SOURCE=1
 

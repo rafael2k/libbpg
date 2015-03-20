@@ -2685,15 +2685,15 @@ void help(int is_full)
 }
 
 struct option long_opts[] = {
-    { "hash", no_argument },
-    { "keepmetadata", no_argument },
-    { "alphaq", required_argument },
-    { "lossless", no_argument },
-    { "limitedrange", no_argument },
-    { "premul", no_argument },
-    { "loop", required_argument },
-    { "fps", required_argument },
-    { "delayfile", required_argument },
+    { "hash", no_argument, 0, 0 },
+    { "keepmetadata", no_argument, 0, 0 },
+    { "alphaq", required_argument, 0, 0 },
+    { "lossless", no_argument, 0, 0 },
+    { "limitedrange", no_argument, 0, 0 },
+    { "premul", no_argument, 0, 0 },
+    { "loop", required_argument, 0, 0 },
+    { "fps", required_argument, 0, 0 },
+    { "delayfile", required_argument, 0, 0 },
     { NULL },
 };
 

@@ -7,15 +7,18 @@
 /m4/ltsugar.m4
 /m4/ltversion.m4
 /m4/lt~obsolete.m4
+/config.h.in
 /configure
 Makefile.in
 
 # configure
 .deps/
+/config.h
 /config.log
 /config.status
 /libbpg.pc
 /libtool
+stamp-h1
 Makefile
 
 # misc
@@ -24,6 +27,9 @@ Makefile
 /man/*.5
 /man/templates/*.header
 /source/.libs/
+*.log
+*.old
+*~
 
 # object code
 *.o
@@ -35,4 +41,11 @@ Makefile
 /source/bpgdec
 /source/bpgenc
 /source/bpgview
+*.exe
+*.app
+*.so
+*.so.*
+*.dll
+*.dylib
+
 

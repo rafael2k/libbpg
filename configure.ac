@@ -17,7 +17,10 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_PROG_CXX
 AC_PROG_CC
 LT_INIT
-AC_CHECK_PROG([EMCC], [emcc], [$(which emcc)])
+
+AC_ARG_VAR([EMCC], [Emscripten emcc command])
+AS_IF([test x$EMCC = x], [EMCC=emcc])
+AC_CHECK_PROG([js], [$EMCC], [true], [false])
 
 
 # Prevent unnecessary linking on some systems.
@@ -71,13 +74,15 @@ AS_IF([test x$jctvc != xtrue -a x$x265 != xtrue],[
       ])
 
 # EMCC/Javascript
-AC_ARG_ENABLE(js, AS_HELP_STRING([--enable-js], [build javascripts (requires Emscripten) [default=no]]),
-                [case "${enableval}" in
-                   yes|true) js=true ;;
-                   no|false) js=false ;;
-                   *) AC_MSG_ERROR([bad value ${enableval} for --enable-js]) ;;
-                 esac],
-                [js=false])
+AS_IF([test x$js = xtrue],
+      [AC_ARG_ENABLE(js, AS_HELP_STRING([--enable-js], [build javascripts (requires Emscripten) [auto]]),
+                      [case "${enableval}" in
+                         yes|true) js=true ;;
+                         no|false) js=false ;;
+                         *) AC_MSG_ERROR([bad value ${enableval} for --enable-js]) ;;
+                       esac],
+                      [js=$js])
+      ])
 AM_CONDITIONAL([USE_EMCC], [test x$js = xtrue])
 
 

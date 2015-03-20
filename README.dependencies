@@ -1,5 +1,0 @@
-Build dependencies on Debian/Ubuntu are:
-libpng16-dev libjpeg8-dev libsdl1.2-dev libsdl-image1.2-dev
-
-You might have to build libpng16-dev manually:
-http://download.sourceforge.net/libpng/libpng-1.6.16.tar.xz

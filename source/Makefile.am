@@ -4,7 +4,7 @@ AM_CXXFLAGS = $(AM_CFLAGS)
 
 
 
-bin_PROGRAMS    = bpgdec bpgenc bpgview
+bin_PROGRAMS    = bpgdec bpgenc bpgmux bpgview
 lib_LTLIBRARIES = libbpg.la
 include_HEADERS = libbpg.h
 
@@ -119,6 +119,10 @@ endif
 
 bpgview_SOURCES = bpgview.c
 bpgview_LDADD   = libbpg.la $(SDL_LIBS) $(SDL_IMAGE_LIBS)
+
+
+
+bpgmux_SOURCES = bpgmux.c bpgfmt.c
 
 
 

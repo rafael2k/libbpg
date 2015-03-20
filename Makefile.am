@@ -1,3 +1,5 @@
+ACLOCAL_AMFLAGS = -I m4
+
 SUBDIRS = source
 
 pkgconfiglibdir   = $(libdir)/pkgconfig
@@ -28,4 +30,8 @@ man/bpg.5:
 	cat man/templates/bpg.5.header > $@
 	cat doc/bpg_spec.txt >> $@
 	cat man/templates/bpg.5.footer >> $@
+
+
+bpgdec bpgenc bpgview libbpg.la javascripts bpgdec.js bpgdec8.js bpgdec8a.js:
+	$(MAKE) -C source $@
 

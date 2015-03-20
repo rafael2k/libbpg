@@ -6,6 +6,9 @@ AC_INIT([libbpg],
         [http://bellard.org/bpg/])
 AC_CONFIG_SRCDIR([source/bpgenc.c])
 
+AC_CONFIG_MACRO_DIR([m4])
+m4_include([m4/ax_check_link_flag.m4])
+
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 
@@ -14,10 +17,10 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_PROG_CXX
 AC_PROG_CC
 LT_INIT
+AC_CHECK_PROG([EMCC], [emcc], [$(which emcc)])
 
 
 # Prevent unnecessary linking on some systems.
-m4_include([ax_check_link_flag.m4])
 AX_CHECK_LINK_FLAG([-Wl,--as-needed], [LDFLAGS="${LDFLAGS} -Wl,--as-needed"])
 
 
@@ -67,6 +70,16 @@ AS_IF([test x$jctvc != xtrue -a x$x265 != xtrue],[
        jctvc_warning="WARNING: no HEVC encoder selected! JCTVC was auto-enabled"
       ])
 
+# EMCC/Javascript
+AC_ARG_ENABLE(js, AS_HELP_STRING([--enable-js], [build javascripts (requires Emscripten) [default=no]]),
+                [case "${enableval}" in
+                   yes|true) js=true ;;
+                   no|false) js=false ;;
+                   *) AC_MSG_ERROR([bad value ${enableval} for --enable-js]) ;;
+                 esac],
+                [js=false])
+AM_CONDITIONAL([USE_EMCC], [test x$js = xtrue])
+
 
 
 # Checks for header files.
@@ -111,5 +124,6 @@ AC_MSG_RESULT([
 selected HEVC encoders:
   JCTVC: $jctvc
   x265:  $x265
+  javascript decoders: $js
 $jctvc_warning])
 

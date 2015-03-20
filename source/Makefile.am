@@ -122,10 +122,53 @@ bpgview_LDADD   = libbpg.la $(SDL_LIBS) $(SDL_IMAGE_LIBS)
 
 
 
+JAVASCRIPTS =
+if USE_EMCC
+JAVASCRIPTS += bpgdec.js bpgdec8.js bpgdec8a.js
+CLEANFILES   = $(JAVASCRIPTS)
+
+EMCFLAGS := -I. $(CFLAGS) $(CPPFLAGS)
+EMCFLAGS += -D_ISOC99_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -DHAVE_AV_CONFIG_H -std=c99 -D_GNU_SOURCE=1
+
+EMLDFLAGS := -s "EXPORTED_FUNCTIONS=['_bpg_decoder_open','_bpg_decoder_decode','_bpg_decoder_get_info','_bpg_decoder_start','_bpg_decoder_get_frame_duration','_bpg_decoder_get_line','_bpg_decoder_close','_malloc','_free']"
+EMLDFLAGS += -s NO_FILESYSTEM=1 -s NO_BROWSER=1
+EMLDFLAGS += -O3 --memory-init-file 0 --closure 1 --post-js post.js
+
+LIBBPG_JS_OBJS   = $(patsubst %.c, %.js.o, $(libbpg_la_SOURCES)) tmalloc.js.o
+LIBBPG_JS8_OBJS  = $(patsubst %.c, %.js8.o, $(libbpg_la_SOURCES)) tmalloc.js8.o
+LIBBPG_JS8A_OBJS = $(patsubst %.c, %.js8a.o, $(libbpg_la_SOURCES)) tmalloc.js8a.o
+
+$(LIBBPG_JS_OBJS): EMCFLAGS+=-DUSE_VAR_BIT_DEPTH
+$(LIBBPG_JS8_OBJS): EMCFLAGS+=
+$(LIBBPG_JS8A_OBJS): EMCFLAGS+=-DUSE_PRED
+
+bpgdec.js: $(LIBBPG_JS_OBJS)
+	$(EMCC) $(EMLDFLAGS) -s TOTAL_MEMORY=33554432 -o $@ $(LIBBPG_JS_OBJS)
+
+bpgdec8.js: $(LIBBPG_JS8_OBJS)
+	$(EMCC) $(EMLDFLAGS) -s TOTAL_MEMORY=16777216 -o $@ $(LIBBPG_JS8_OBJS)
+
+bpgdec8a.js: $(LIBBPG_JS8A_OBJS)
+	$(EMCC) $(EMLDFLAGS) -s TOTAL_MEMORY=16777216 -o $@ $(LIBBPG_JS8A_OBJS)
+
+%.js.o: %.c
+	$(EMCC) $(EMCFLAGS) -c -o $@ $<
+
+%.js8.o: %.c
+	$(EMCC) $(EMCFLAGS) -c -o $@ $<
+
+%.js8a.o: %.c
+	$(EMCC) $(EMCFLAGS) -c -o $@ $<
+endif
+
+
+
 # hack libbpg.la to install the library as libbpg-VERSION.so.0 and create the following
 # symbolic links to it: libbpg-VERSION.so libbpg.so
-all-local:
+all-local: javascripts
 	[ ! -f libbpg.la ] || sed -i "s/library_names='libbpg-$(VERSION).so.0.0.0 libbpg-$(VERSION).so.0 libbpg.so'/library_names='libbpg-$(VERSION).so.0 libbpg-$(VERSION).so libbpg.so'/" libbpg.la
+
+javascripts: $(JAVASCRIPTS)
 
 
 

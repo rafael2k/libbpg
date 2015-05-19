@@ -1,0 +1,12 @@
+Source: libbpg
+Maintainer: Rafael Diniz <rafaeldiniz@telemidia.puc-rio.br>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.5
+Build-Depends: debhelper (>= 9)
+Homepage: https://github.com/rafael2k/libbpg
+
+Package: libbpg
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description:  This is the libbpg library, by Fabrice Bellard.

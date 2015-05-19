@@ -38,12 +38,12 @@ libbpg_la_CPPFLAGS = $(AM_CPPFLAGS) \
 
 # name the shared library libbpg-VERSION.so.0 until the first official
 # libbpg.so.0 version is released
-libbpg_la_LDFLAGS = -release $(VERSION) -version-info 0:0:0
+libbpg_la_LDFLAGS = -release $(VERSION) -version-info 0:0:0 -Wl,--version-script=$(srcdir)/libbpg.map
 
 
 
 bpgdec_SOURCES = bpgdec.c
-bpgdec_LDADD   = libbpg.la $(PNG16_LIBS)
+bpgdec_LDADD   = libbpg.la $(PNG16_LIBS) -lz
 
 
 
@@ -51,7 +51,7 @@ bpgenc_SOURCES  = bpgenc.c
 bpgenc_CFLAGS   = $(AM_CFLAGS) $(PNG16_CFLAGS)
 bpgenc_CPPFLAGS = $(AM_CPPFLAGS)
 bpgenc_CXXFLAGS = $(AM_CXXFLAGS)
-bpgenc_LDADD    = libbpg.la $(PNG16_LIBS)
+bpgenc_LDADD    = libbpg.la $(PNG16_LIBS) -lz
 
 if USE_JCTVC
 bpgenc_SOURCES += jctvc_glue.cpp \

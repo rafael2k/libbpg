@@ -13,9 +13,9 @@ CLEANFILES = $(man1_MANS) $(man5_MANS)
 
 
 make_man1 = \
-	cat man/templates/`basename $^`.1.header > $@ ; \
-	$^ >> $@ || true ; \
-	cat man/templates/`basename $^`.1.footer >> $@
+	cat man/templates/$^.1.header > $@ ; \
+	source/$^ >> $@ || true ; \
+	cat man/templates/$^.1.footer >> $@
 
 man/bpgdec.1: bpgdec
 	$(make_man1)
